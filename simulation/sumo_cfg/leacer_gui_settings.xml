@@ -1,0 +1,20 @@
+<viewsettings>
+    <scheme name="LEACER View">
+        <vehicles>
+            <colorScheme name="by speed">
+                <entry color="red"    threshold="0"/>
+                <entry color="yellow" threshold="8"/>
+                <entry color="green"  threshold="16"/>
+            </colorScheme>
+        </vehicles>
+        <edges>
+            <colorScheme name="by occupancy">
+                <entry color="green"  threshold="0"/>
+                <entry color="yellow" threshold="0.3"/>
+                <entry color="red"    threshold="0.7"/>
+            </colorScheme>
+        </edges>
+    </scheme>
+    <viewport zoom="150" x="500" y="500"/>
+    <delay value="50"/>
+</viewsettings>

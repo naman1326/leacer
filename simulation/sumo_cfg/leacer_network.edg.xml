@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges>
+  <edge id="E00_01" from="N00" to="N01" numLanes="2" speed="16.67" priority="2"/>
+  <edge id="E01_00" from="N01" to="N00" numLanes="2" speed="16.67" priority="2"/>
+  <edge id="E01_02" from="N01" to="N02" numLanes="2" speed="16.67" priority="2"/>
+  <edge id="E02_01" from="N02" to="N01" numLanes="2" speed="16.67" priority="2"/>
+  <edge id="E10_11" from="N10" to="N11" numLanes="3" speed="16.67" priority="3"/>
+  <edge id="E11_10" from="N11" to="N10" numLanes="3" speed="16.67" priority="3"/>
+  <edge id="E11_12" from="N11" to="N12" numLanes="3" speed="16.67" priority="3"/>
+  <edge id="E12_11" from="N12" to="N11" numLanes="3" speed="16.67" priority="3"/>
+  <edge id="E20_21" from="N20" to="N21" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E21_20" from="N21" to="N20" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E21_22" from="N21" to="N22" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E22_21" from="N22" to="N21" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E00_10" from="N00" to="N10" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E10_00" from="N10" to="N00" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E10_20" from="N10" to="N20" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E20_10" from="N20" to="N10" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E01_11" from="N01" to="N11" numLanes="3" speed="16.67" priority="3"/>
+  <edge id="E11_01" from="N11" to="N01" numLanes="3" speed="16.67" priority="3"/>
+  <edge id="E11_21" from="N11" to="N21" numLanes="3" speed="16.67" priority="3"/>
+  <edge id="E21_11" from="N21" to="N11" numLanes="3" speed="16.67" priority="3"/>
+  <edge id="E02_12" from="N02" to="N12" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E12_02" from="N12" to="N02" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E12_22" from="N12" to="N22" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E22_12" from="N22" to="N12" numLanes="2" speed="13.89" priority="2"/>
+  <edge id="E_IN_W"  from="IN_W" to="N10" numLanes="2" speed="16.67" priority="1"/>
+  <edge id="E_OUT_W" from="N10" to="IN_W" numLanes="2" speed="16.67" priority="1"/>
+  <edge id="E_IN_E"  from="IN_E" to="N12" numLanes="2" speed="16.67" priority="1"/>
+  <edge id="E_OUT_E" from="N12" to="IN_E" numLanes="2" speed="16.67" priority="1"/>
+  <edge id="E_IN_N"  from="IN_N" to="N01" numLanes="2" speed="16.67" priority="1"/>
+  <edge id="E_OUT_N" from="N01" to="IN_N" numLanes="2" speed="16.67" priority="1"/>
+  <edge id="E_IN_S"  from="IN_S" to="N21" numLanes="2" speed="16.67" priority="1"/>
+  <edge id="E_OUT_S" from="N21" to="IN_S" numLanes="2" speed="16.67" priority="1"/>
+</edges>

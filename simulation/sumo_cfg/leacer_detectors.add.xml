@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additionals>
+  <inductionLoop id="det_E00_01" lane="E00_01_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E01_02" lane="E01_02_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E10_11" lane="E10_11_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E11_12" lane="E11_12_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E20_21" lane="E20_21_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E21_22" lane="E21_22_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E00_10" lane="E00_10_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E10_20" lane="E10_20_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E01_11" lane="E01_11_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E11_21" lane="E11_21_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E02_12" lane="E02_12_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E12_22" lane="E12_22_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E01_00" lane="E01_00_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E02_01" lane="E02_01_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E11_10" lane="E11_10_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E12_11" lane="E12_11_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E21_20" lane="E21_20_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E22_21" lane="E22_21_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E10_00" lane="E10_00_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E20_10" lane="E20_10_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E11_01" lane="E11_01_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E21_11" lane="E21_11_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E12_02" lane="E12_02_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+  <inductionLoop id="det_E22_12" lane="E22_12_0" pos="250" freq="60" file="../results/sumo_lanedata.xml" friendlyPos="true"/>
+</additionals>

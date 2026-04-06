@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <input>
+    <net-file value="leacer_network.net.xml"/>
+    <route-files value="leacer_routes.rou.xml"/>
+    <additional-files value="leacer_detectors.add.xml"/>
+    <gui-settings-file value="leacer_gui_settings.xml"/>
+  </input>
+  <time>
+    <begin value="0"/>
+    <end value="3600"/>
+    <step-length value="1.0"/>
+  </time>
+  <processing>
+    <ignore-route-errors value="true"/>
+    <time-to-teleport value="-1"/>
+    <waiting-time-memory value="100"/>
+    <max-depart-delay value="60"/>
+  </processing>
+  <output>
+    <summary-output value="../results/sumo_summary.xml"/>
+    <tripinfo-output value="../results/sumo_tripinfo.xml"/>
+    <queue-output value="../results/sumo_queues.xml"/>
+  </output>
+  <random>
+    <seed value="42"/>
+  </random>
+  <report>
+    <no-step-log value="true"/>
+    <duration-log.statistics value="true"/>
+    <delay value="50"/>
+  </report>
+</configuration>
