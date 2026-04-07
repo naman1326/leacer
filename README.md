@@ -24,22 +24,32 @@ The framework generates 12 detailed comparison plots, including:
 ### Prerequisites
 *   Python 3.8+
 *   [SUMO (Simulation of Urban MObility)](https://sumo.dlr.de/docs/Installing/index.html)
-*   `traci`, `sumolib`, `numpy`, `pandas`, `matplotlib`, `torch` (optional for PPO)
+*   `traci`, `sumolib`, `numpy`, `pandas`, `matplotlib`, `torch`
 
 ### Quick Start
-1.  **Clone the repository:**
+
+1.  **Train the Intelligence Layer (Optional):**
     ```bash
-    git clone https://github.com/naman1326/leacer.git
-    cd leacer
+    # Train Traffic Predictor
+    python simulation/train_gru.py
+    # Train Routing Policy
+    python simulation/train_ppo.py --episodes 100
     ```
-2.  **Run the full simulation suite (all algorithms + plots):**
+
+2.  **Run with GUI Visualization:**
     ```bash
-    cd simulation
-    python run_simulation.py --mode all --plot --steps 3600
+    python simulation/run_simulation.py --mode leacer --steps 3600 --gui
     ```
-3.  **View Results:**
-    *   Telemetry: `simulation/results/`
-    *   Plots: `simulation/results/plots/`
+
+3.  **Run Full Comparative Analysis (Generates Plots):**
+    ```bash
+    python simulation/run_simulation.py --mode all --steps 3600 --plot
+    ```
+
+### Results & Data
+*   **KPI Summary:** `simulation/results/leacer_run_summary.json`
+*   **Telemetry CSVs:** `simulation/results/*.csv`
+*   **IEEE-Standard Plots:** `simulation/results/plots/*.pdf` (and .png)
 
 ## 📖 Framework Architecture
 

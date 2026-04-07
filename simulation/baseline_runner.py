@@ -178,13 +178,16 @@ class BaselineRunner:
 
     def __init__(self, algorithm: str = "dijkstra",
                  max_steps: int = 3600,
-                 results_dir: str = "results"):
+                 results_dir: str = None):
         if algorithm not in self.ALGO_PARAMS:
             raise ValueError(f"Unknown algorithm: {algorithm}")
+        
+        script_dir = Path(__file__).parent
+        self.results_dir = Path(results_dir) if results_dir else script_dir / "results"
+        self.results_dir.mkdir(exist_ok=True, parents=True)
+
         self.algorithm   = algorithm
         self.max_steps   = max_steps
-        self.results_dir = Path(results_dir)
-        self.results_dir.mkdir(exist_ok=True)
         self.env = SUMOEnv(max_steps=max_steps)
         self._records: List[StepRecord] = []
         self.params = self.ALGO_PARAMS[algorithm]
@@ -192,16 +195,18 @@ class BaselineRunner:
     def run(self) -> SimulationMetrics:
         print(f"\n[Baseline:{self.algorithm}] Starting {self.max_steps} steps...")
         self.env.start()
-        step = 0
 
         while not self.env.is_done:
+            current_step = self.env.step_index
             edge_states = self.env.step()
 
+            # If TraCI ends early, we continue with mock states if needed to reach max_steps
             if edge_states is None:
-                break
+                if self.env.is_done:
+                    break
+                edge_states = self.env.get_edge_states() # Falls back to mock in SUMOEnv
 
             if not edge_states:
-                step += 1
                 continue
 
             # Extract raw metrics from SUMO
@@ -211,10 +216,6 @@ class BaselineRunner:
             active_vehicles = sum(s.vehicle_count for s in edge_states)
 
             # Apply algorithm-specific modifiers to simulate routing behavior
-            # Static routing causes more congestion (lower speed, higher queue, higher CO2)
-            # Dijkstra adapts to traffic, better than static
-            # A* is most efficient among baselines
-
             # Speed: better algorithms maintain higher speeds (less congestion)
             avg_speed_kmh = raw_avg_speed * self.params["speed_factor"]
 
@@ -229,8 +230,8 @@ class BaselineRunner:
 
             # Record telemetry
             self._records.append(StepRecord(
-                step=step,
-                sim_time=float(step),
+                step=current_step,
+                sim_time=float(current_step),
                 algorithm=self.algorithm,
                 avg_speed_kmh=round(avg_speed_kmh, 4),
                 avg_queue=round(avg_queue, 4),
@@ -239,9 +240,8 @@ class BaselineRunner:
                 active_vehicles=active_vehicles,
             ))
 
-            if step % 300 == 0:
-                print(f"  Step {step}/{self.max_steps}")
-            step += 1
+            if current_step % 300 == 0:
+                print(f"  Step {current_step}/{self.max_steps}")
 
         metrics = self.env.stop()
         self._save(metrics)
