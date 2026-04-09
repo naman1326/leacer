@@ -37,6 +37,7 @@ The framework generates 12 detailed comparison plots, including:
     ```
 
 2.  **Run with GUI Visualization:**
+    Use this command to visualize the LEACER algorithm in the SUMO GUI:
     ```bash
     python simulation/run_simulation.py --mode leacer --steps 3600 --gui
     ```
@@ -52,6 +53,8 @@ The framework generates 12 detailed comparison plots, including:
 *   **IEEE-Standard Plots:** `simulation/results/plots/*.pdf` (and .png)
 
 ## 📖 Framework Architecture
+
+<img src="leacer_ss.png" width="100%" alt="LEACER Framework Architecture">
 
 1.  **Data Layer:** RSU Aggregator + IoT Fusion
 2.  **Intelligence Layer:** GAT Encoder + PPO Policy
