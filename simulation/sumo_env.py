@@ -241,11 +241,13 @@ class SUMOEnv:
                 traci.simulationStep()
                 self._track_vehicles()
             except Exception as e:
-                print(f"\n[SUMOEnv] Connection lost: {e}")
-                print("[SUMOEnv] Ending simulation gracefully.")
+                # If TraCI connection is lost (simulation ended), stop and break.
+                # However, if we're below max_steps, we might want to continue in mock mode, 
+                # but TraCI being gone usually means the binary closed.
+                # Let's signal and stop.
+                print(f"\n[SUMOEnv] TraCI stopped (Step {self._step}): {e}")
                 self._running = False
-                self._step = self.max_steps
-                return None          # signal to runner to break
+                return None
         else:
             self._mock_step()
 
@@ -357,10 +359,22 @@ class SUMOEnv:
 
     @staticmethod
     def _time_of_day_factor(sim_time_s: float) -> float:
+        """
+        Returns a scaling factor [0.3, 4.0] based on time of day.
+        Simulates morning (8AM) and evening (6PM) peaks with added randomness.
+        """
         t_h = (sim_time_s / 3600.0 + 6.0) % 24.0
-        am   = np.exp(-0.5 * ((t_h - 8.0)  / 1.0) ** 2) * 1.5
-        pm   = np.exp(-0.5 * ((t_h - 18.0) / 1.0) ** 2) * 1.3
-        return 0.4 + am + pm
+        # Aggressive peaks
+        am   = np.exp(-0.5 * ((t_h - 8.0)  / 1.2) ** 2) * 3.0
+        pm   = np.exp(-0.5 * ((t_h - 18.0) / 1.2) ** 2) * 2.5
+        
+        # Add a low-frequency oscillation for more natural curve variance
+        osc = 0.2 * np.sin(2 * np.pi * t_h / 24.0)
+        
+        # Add some noise
+        noise = np.random.normal(0, 0.05)
+        
+        return max(0.2, 0.3 + am + pm + osc + noise)
 
     # ─────────────────────────────────────────────────────────────────────
     # Vehicle Control
@@ -424,6 +438,10 @@ class SUMOEnv:
     @property
     def edge_ids(self) -> List[str]:
         return list(self._edge_ids)
+
+    @property
+    def step_index(self) -> int:
+        return self._step
 
     @property
     def is_done(self) -> bool:

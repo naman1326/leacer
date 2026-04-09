@@ -22,8 +22,9 @@ except ImportError:
     print("[WARN] matplotlib not found. Plots will not be generated.")
 
 
-RESULTS_DIR = Path("results")
-PLOTS_DIR   = Path("results/plots")
+SCRIPT_DIR  = Path(__file__).parent
+RESULTS_DIR = SCRIPT_DIR / "results"
+PLOTS_DIR   = RESULTS_DIR / "plots"
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 
 ALGORITHMS  = ["leacer", "dijkstra", "astar", "static"]
