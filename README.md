@@ -54,7 +54,7 @@ The framework generates 12 detailed comparison plots, including:
 
 ## 📖 Framework Architecture
 
-<img src="leacer_ss.png" width="100%" alt="LEACER Framework Architecture">
+[**View Interactive Architecture Diagram (LEACER_diagram_1.html)**](./LEACER_diagram_1.html)
 
 1.  **Data Layer:** RSU Aggregator + IoT Fusion
 2.  **Intelligence Layer:** GAT Encoder + PPO Policy
