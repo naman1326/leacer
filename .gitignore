@@ -150,7 +150,7 @@ cython_debug/
 .vscode/
 
 # Project-specific ignores
-simulation/results/
+# simulation/results/
 simulation/__pycache__/
 __pycache__/
 *.npy
@@ -158,5 +158,25 @@ __pycache__/
 *.xml
 *.pdf
 *.json
+
+# Allow specific configuration files
 !simulation/sumo_cfg/*.xml
 !simulation/sumo_cfg/*.sumocfg
+
+# Allow results and plots
+!simulation/results/
+!simulation/results/*.csv
+!simulation/results/*.json
+!simulation/results/*.xml
+!simulation/results/plots/
+!simulation/results/plots/*.pdf
+!simulation/results/plots/*.png
+
+# Allow trained models and small data
+!simulation/data/
+!simulation/data/*.pt
+!simulation/data/*.npz
+!simulation/data/*.png
+
+# Allow visualization source
+!LEACER.drawio
