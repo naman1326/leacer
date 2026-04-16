@@ -1,0 +1,9 @@
+{
+  "avg_speed_kmh": 46.7440637745758,
+  "avg_queue_length": 0.45966145833333333,
+  "mean_latency_ms": 1623220.7118626877,
+  "total_co2_kg": 1974.9045702719454,
+  "reroute_events": 117,
+  "total_steps": 3600,
+  "completed_trips": 1708
+}
