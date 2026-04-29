@@ -69,7 +69,12 @@ To regenerate the results or analyze existing data, use the following:
 python simulation/results_analyzer.py
 ```
 
-## 📖 Framework Architecture
+## 📖 Research Paper
+The technical details, mathematical formulations, and experimental results of the LEACER framework are documented in the following research paper:
+
+*   **View on Overleaf:** [LEACER: Lightweight Edge-AI Cooperative Event-triggered Re-routing](https://www.overleaf.com/read/mstksgzdtkzm#c00324)
+
+## 📂 Framework Architecture
 
 <img src="leacer_ss.png" width="100%" alt="LEACER Framework Architecture">
 
