@@ -77,7 +77,10 @@ class ModelLoader:
             # ── GRU ───────────────────────────────────────────────────────
             gru_path = self.data_dir / "gru_weights.pt"
             if gru_path.exists():
-                ckpt = torch.load(gru_path, map_location="cpu")
+                try:
+                    ckpt = torch.load(gru_path, map_location="cpu", weights_only=False)
+                except TypeError:
+                    ckpt = torch.load(gru_path, map_location="cpu")
                 cfg  = ckpt["model_config"]
 
                 class GRUModel(nn.Module):
@@ -109,25 +112,34 @@ class ModelLoader:
             # ── PPO ───────────────────────────────────────────────────────
             ppo_path = self.data_dir / "ppo_weights.pt"
             if ppo_path.exists():
-                ckpt = torch.load(ppo_path, map_location="cpu")
+                try:
+                    ckpt = torch.load(ppo_path, map_location="cpu", weights_only=False)
+                except TypeError:
+                    ckpt = torch.load(ppo_path, map_location="cpu")
                 cfg  = ckpt["model_config"]
 
                 class AC(nn.Module):
                     def __init__(self):
                         super().__init__()
                         h = cfg["hidden"]
-                        self.bb = nn.Sequential(
+                        self.backbone = nn.Sequential(
                             nn.Linear(cfg["state_dim"], h), nn.Tanh(),
                             nn.Linear(h, h), nn.Tanh())
                         self.actor  = nn.Linear(h, cfg["n_actions"])
                         self.critic = nn.Linear(h, 1)
 
                     def forward(self, s):
-                        f = self.bb(s)
+                        f = self.backbone(s)
                         return self.actor(f), self.critic(f).squeeze(-1)
 
                 m2 = AC()
-                m2.load_state_dict(ckpt["model_state"])
+                try:
+                    m2.load_state_dict(ckpt["model_state"])
+                except Exception:
+                    # Fallback for key mapping if needed
+                    state = ckpt["model_state"]
+                    new_state = {k.replace("bb.", "backbone."): v for k, v in state.items()}
+                    m2.load_state_dict(new_state, strict=False)
                 m2.eval()
                 self.ppo_model = m2
                 print(f"[LEACER] PPO weights loaded  (best_avg={ckpt['best_avg_reward']:.4f})")
@@ -292,7 +304,7 @@ class LEACERRunner:
                 "avg_speed_kmh":   round(avg_speed, 3),
                 "avg_queue":       round(avg_queue, 4),
                 "avg_latency_ms":  round(avg_lat * 1000, 2),
-                "co2_total":       round(step_co2_mg, 4),
+                "co2_total":       round(self._co2_cum, 4),
                 "active_vehicles": active_vehicles,
                 "reroute_events":  self._reroutes,
             })
@@ -379,7 +391,7 @@ class LEACERRunner:
         df   = pd.DataFrame(self._records)
         path = self.RESULTS_DIR / "leacer_run_telemetry.csv"
         df.to_csv(path, index=False)
-        print(f"  Telemetry saved → {path}")
+        print(f"  Telemetry saved -> {path}")
 
         summary = {
             "avg_speed_kmh":   metrics.avg_speed_kmh,
@@ -394,4 +406,4 @@ class LEACERRunner:
         import json
         with open(spath, "w") as f:
             json.dump(summary, f, indent=2)
-        print(f"  Summary saved  → {spath}")
+        print(f"  Summary saved  -> {spath}")

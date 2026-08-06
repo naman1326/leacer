@@ -163,14 +163,12 @@ __pycache__/
 !simulation/sumo_cfg/*.xml
 !simulation/sumo_cfg/*.sumocfg
 
-# Allow results and plots
-!simulation/results/
-!simulation/results/*.csv
-!simulation/results/*.json
-!simulation/results/*.xml
+# Ignore simulation results and generated plots
+simulation/results/*
+!simulation/results/.gitkeep
 !simulation/results/plots/
-!simulation/results/plots/*.pdf
-!simulation/results/plots/*.png
+simulation/results/plots/*
+!simulation/results/plots/.gitkeep
 
 # Allow trained models and small data
 !simulation/data/
@@ -180,3 +178,4 @@ __pycache__/
 
 # Allow visualization source
 !LEACER.drawio
+

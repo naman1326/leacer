@@ -180,6 +180,9 @@ class SUMOEnv:
             "--waiting-time-memory", "100",
         ]
 
+        if self.use_gui:
+            cmd.extend(["--start", "true", "--quit-on-end", "true"])
+
         traci.start(cmd)
 
         self._running  = True
