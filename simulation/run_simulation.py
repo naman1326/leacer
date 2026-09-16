@@ -23,17 +23,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
-def run_leacer(steps: int, gui: bool):
+def run_leacer(steps: int, gui: bool = False, **kwargs):
     from leacer_runner import LEACERRunner
-    runner = LEACERRunner(use_sumo_gui=gui, max_steps=steps,
-                          step_log_freq=200, save_results=True)
+    from scenario_config import SUMOCFG_PATH
+    cfg = kwargs.get("cfg_path") or str(SUMOCFG_PATH)
+    runner = LEACERRunner(cfg_path=cfg, use_gui=gui, max_steps=steps)
     return runner.run()
 
 
-def run_baseline(algo: str, steps: int):
-    from baseline_runner import BaselineRunner
-    runner = BaselineRunner(algorithm=algo, max_steps=steps)
-    return runner.run()
+def run_baseline(algo: str, steps: int, gui: bool = False):
+    from baseline_classical import run as run_classical
+    return run_classical(algo=algo, steps=steps, use_gui=gui)
 
 
 def run_dataset(n_episodes: int, steps: int, save_path: str):
@@ -54,19 +54,9 @@ def run_dataset(n_episodes: int, steps: int, save_path: str):
     print(f"Saved to: {data_dir}")
 
 
-def run_analysis(plot: bool):
-    from results_analyzer import load_results, compute_kpi_table, plot_all
-    dfs = load_results()
-    if not dfs:
-        print("No results found. Run simulations first.")
-        return
-    kpi = compute_kpi_table(dfs)
-    print("\n" + "="*60)
-    print("KPI Comparison Table")
-    print("="*60)
-    print(kpi.to_string(index=False))
-    if plot:
-        plot_all(dfs)
+def run_analysis(plot: bool = True):
+    from results_analyzer import run_analysis as analyze
+    analyze()
 
 
 if __name__ == "__main__":
@@ -77,20 +67,19 @@ if __name__ == "__main__":
                         help="Simulation steps (seconds)")
     parser.add_argument("--episodes", type=int, default=50,
                         help="Dataset episodes (dataset mode)")
-    parser.add_argument("--gui",      action="store_true",
+    parser.add_argument("--gui",      action="store_true", default=False,
                         help="Launch SUMO with GUI")
     parser.add_argument("--plot",     action="store_true",
                         help="Generate comparison plots")
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
     if args.mode == "leacer":
         run_leacer(args.steps, args.gui)
 
     elif args.mode == "all":
         print("Running all algorithms for comparison...")
-        run_leacer(args.steps, False)
         for algo in ["dijkstra", "astar", "static"]:
-            run_baseline(algo, args.steps)
+            run_baseline(algo, args.steps, args.gui)
         if args.plot:
             run_analysis(plot=True)
 

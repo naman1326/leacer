@@ -49,13 +49,25 @@ FALLBACK_ADJACENCY = {
 
 class RoadGraph:
     """
-    Wraps the SUMO network as a networkx DiGraph for routing.
-    Nodes = SUMO junctions.  Edges = SUMO road edges (id, length, speed).
+    Wraps the SUMO network as both a junction-level and edge-level networkx DiGraph.
+    - Junction graph (G): Nodes = SUMO junctions, Edges = SUMO road edges.
+    - Edge graph (G_edge): Nodes = SUMO edge IDs, Edges = physically valid SUMO lane connections.
     """
 
     def __init__(self, net_file: str = None):
-        self.net_file = net_file or str(SIM_DIR / "sumo_cfg" / "leacer_network.net.xml")
+        if net_file is None:
+            try:
+                from scenario_config import NET_FILE_PATH
+                self.net_file = str(NET_FILE_PATH)
+            except Exception:
+                self.net_file = str(SIM_DIR / "sumo_cfg" / "leacer_network.net.xml")
+        else:
+            self.net_file = net_file
+
         self.G = nx.DiGraph()
+        self.G_edge = nx.DiGraph()
+        self._valid_connections = set()
+        self._outgoing_edges = {}
         self._edge_lookup = {}     # (u,v) -> sumo edge id
         self._id_to_uv    = {}     # sumo edge id -> (u,v)
         self._net = None
@@ -67,27 +79,87 @@ class RoadGraph:
 
     def _load_from_sumolib(self):
         self._net = sumolib.net.readNet(self.net_file)
+        self._valid_connections = set()
+        self._outgoing_edges = {}
+        self.G_edge = nx.DiGraph()
+
         for edge in self._net.getEdges():
             if edge.isSpecial():
                 continue
+            eid = edge.getID()
             u, v = edge.getFromNode().getID(), edge.getToNode().getID()
-            eid, length, speed = edge.getID(), edge.getLength(), edge.getSpeed()
+            length, speed = edge.getLength(), edge.getSpeed()
+            weight = length / max(speed, 0.1)
+
             self.G.add_edge(u, v, id=eid, length=length,
-                             speed=speed, weight=length / max(speed, 0.1))
+                             speed=speed, weight=weight)
             self._edge_lookup[(u, v)] = eid
             self._id_to_uv[eid] = (u, v)
+
+            to_node = edge.getToNode()
+            coord = to_node.getCoord() if to_node else (0.0, 0.0)
+            self.G_edge.add_node(eid, length=length, speed=speed, weight=weight,
+                                 coord=coord, to_node=v, from_node=u)
+
+            out_eids = []
+            allowed = edge.getAllowedOutgoing('passenger')
+            if not allowed and not edge.allows('passenger'):
+                allowed = edge.getOutgoing()
+            for out in allowed:
+                if not out.isSpecial():
+                    out_id = out.getID()
+                    out_eids.append(out_id)
+                    self._valid_connections.add((eid, out_id))
+            self._outgoing_edges[eid] = out_eids
+
+        for eid, out_eids in self._outgoing_edges.items():
+            for out_id in out_eids:
+                if out_id in self.G_edge:
+                    w = self.G_edge.nodes[out_id]["weight"]
+                    self.G_edge.add_edge(eid, out_id, weight=w)
+
         print(f"[RoadGraph] Loaded {self.G.number_of_nodes()} junctions, "
-              f"{self.G.number_of_edges()} edges from {os.path.basename(self.net_file)}")
+              f"{self.G_edge.number_of_nodes()} edges, {len(self._valid_connections)} connections "
+              f"from {os.path.basename(self.net_file)}")
 
     def _load_fallback(self):
+        self._valid_connections = set()
+        self._outgoing_edges = {}
+        self.G_edge = nx.DiGraph()
+
         for u, neighbours in FALLBACK_ADJACENCY.items():
             for v in neighbours:
                 eid = f"E{u}_{v}"
                 self.G.add_edge(u, v, id=eid, length=100.0, speed=13.9, weight=100.0/13.9)
                 self._edge_lookup[(u, v)] = eid
                 self._id_to_uv[eid] = (u, v)
+                self.G_edge.add_node(eid, length=100.0, speed=13.9, weight=100.0/13.9,
+                                     coord=(0.0, 0.0), to_node=v, from_node=u)
+
+        for (u, v), eid in self._edge_lookup.items():
+            out_eids = []
+            for w in FALLBACK_ADJACENCY.get(v, []):
+                out_id = f"E{v}_{w}"
+                out_eids.append(out_id)
+                self._valid_connections.add((eid, out_id))
+                self.G_edge.add_edge(eid, out_id, weight=100.0/13.9)
+            self._outgoing_edges[eid] = out_eids
+
         print(f"[RoadGraph] FALLBACK grid loaded ({self.G.number_of_nodes()} nodes) — "
               f"route commits will likely fail until sumolib works.")
+
+    def get_outgoing_edges(self, edge_id: str) -> list:
+        return self._outgoing_edges.get(edge_id, [])
+
+    def is_valid_route(self, edge_path: list) -> bool:
+        if not edge_path:
+            return False
+        if len(edge_path) == 1:
+            return True
+        for e1, e2 in zip(edge_path[:-1], edge_path[1:]):
+            if (e1, e2) not in self._valid_connections:
+                return False
+        return True
 
     def update_weights_from_traci(self):
         """Pull live travel times from TraCI and refresh graph edge weights."""
@@ -95,9 +167,14 @@ class RoadGraph:
             import traci
             for _, _, data in self.G.edges(data=True):
                 try:
-                    tt = traci.edge.getTraveltime(data["id"])
+                    eid = data["id"]
+                    tt = traci.edge.getTraveltime(eid)
                     if tt > 0:
                         data["weight"] = tt
+                        if eid in self.G_edge:
+                            self.G_edge.nodes[eid]["weight"] = tt
+                            for in_u, _, in_d in self.G_edge.in_edges(eid, data=True):
+                                in_d["weight"] = tt
                 except Exception:
                     pass
         except Exception:
@@ -112,14 +189,32 @@ class RoadGraph:
             edges.append(eid)
         return edges
 
-    def dijkstra(self, src_node, dst_node):
+    def _remove_edge_temporarily(self, exclude_edge):
+        if not exclude_edge:
+            return None
+        u, v = exclude_edge
+        if self.G.has_edge(u, v):
+            saved = (u, v, dict(self.G[u][v]))
+            self.G.remove_edge(u, v)
+            return saved
+        return None
+
+    def _restore_edge(self, saved):
+        if saved:
+            u, v, data = saved
+            self.G.add_edge(u, v, **data)
+
+    def dijkstra(self, src_node, dst_node, exclude_edge=None):
+        saved = self._remove_edge_temporarily(exclude_edge)
         try:
             path = nx.dijkstra_path(self.G, src_node, dst_node, weight="weight")
             return self.node_path_to_edges(path)
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             return None
+        finally:
+            self._restore_edge(saved)
 
-    def astar(self, src_node, dst_node):
+    def astar(self, src_node, dst_node, exclude_edge=None):
         def heuristic(a, b):
             try:
                 ax, ay = self._net.getNode(a).getCoord()
@@ -127,11 +222,64 @@ class RoadGraph:
                 return math.hypot(ax - bx, ay - by) / 15.0
             except Exception:
                 return 0.0
+        saved = self._remove_edge_temporarily(exclude_edge)
         try:
             path = nx.astar_path(self.G, src_node, dst_node, heuristic=heuristic, weight="weight")
             return self.node_path_to_edges(path)
         except (nx.NetworkXNoPath, nx.NodeNotFound):
             return None
+        finally:
+            self._restore_edge(saved)
+
+    def dijkstra_edges(self, src_edge: str, dst_edge: str, exclude_edge: str = None) -> list:
+        if src_edge not in self.G_edge or dst_edge not in self.G_edge:
+            return None
+        if src_edge == dst_edge:
+            return [src_edge]
+
+        saved = None
+        if exclude_edge and self.G_edge.has_edge(src_edge, exclude_edge):
+            saved = (src_edge, exclude_edge, dict(self.G_edge[src_edge][exclude_edge]))
+            self.G_edge.remove_edge(src_edge, exclude_edge)
+
+        try:
+            path = nx.dijkstra_path(self.G_edge, src_edge, dst_edge, weight="weight")
+            return path
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            return None
+        finally:
+            if saved:
+                u, v, data = saved
+                self.G_edge.add_edge(u, v, **data)
+
+    def astar_edges(self, src_edge: str, dst_edge: str, exclude_edge: str = None) -> list:
+        if src_edge not in self.G_edge or dst_edge not in self.G_edge:
+            return None
+        if src_edge == dst_edge:
+            return [src_edge]
+
+        saved = None
+        if exclude_edge and self.G_edge.has_edge(src_edge, exclude_edge):
+            saved = (src_edge, exclude_edge, dict(self.G_edge[src_edge][exclude_edge]))
+            self.G_edge.remove_edge(src_edge, exclude_edge)
+
+        def heuristic(a, b):
+            try:
+                ax, ay = self.G_edge.nodes[a]["coord"]
+                bx, by = self.G_edge.nodes[b]["coord"]
+                return math.hypot(ax - bx, ay - by) / 15.0
+            except Exception:
+                return 0.0
+
+        try:
+            path = nx.astar_path(self.G_edge, src_edge, dst_edge, heuristic=heuristic, weight="weight")
+            return path
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            return None
+        finally:
+            if saved:
+                u, v, data = saved
+                self.G_edge.add_edge(u, v, **data)
 
     def edge_of(self, u, v):
         return self._edge_lookup.get((u, v))
@@ -156,8 +304,10 @@ def compute_co2_step(speed_kmh: float, density: float, length_km: float) -> floa
 
 
 # ── Route commit ───────────────────────────────────────────────────────────────
-def commit_route(veh_id: str, edge_path: list) -> bool:
+def commit_route(veh_id: str, edge_path: list, road: RoadGraph = None) -> bool:
     if not edge_path:
+        return False
+    if road is not None and not road.is_valid_route(edge_path):
         return False
     try:
         import traci

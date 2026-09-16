@@ -23,6 +23,7 @@ sys.path.insert(0, str(SIM_DIR))
 
 from sumo_env import SUMOEnv
 from routing_utils import RoadGraph, TelemetryRecorder, commit_route
+from scenario_config import SUMOCFG_PATH, NET_FILE_PATH
 
 REROUTE_INTERVAL = 30          # steps between reroute cycles
 MAX_VEHICLES_PER_CYCLE = 25    # cap per-cycle cost
@@ -30,10 +31,10 @@ MAX_VEHICLES_PER_CYCLE = 25    # cap per-cycle cost
 
 def run(algo: str, steps: int, use_gui: bool):
     assert algo in ("static", "dijkstra", "astar")
-    cfg = str(SIM_DIR / "sumo_cfg" / "leacer.sumocfg")
+    cfg = str(SUMOCFG_PATH)
 
-    env  = SUMOEnv(cfg_path=cfg, use_gui=use_gui, max_steps=steps)
-    road = RoadGraph() if algo != "static" else None
+    env  = SUMOEnv(cfg_path=cfg, use_gui=use_gui, max_steps=steps, output_prefix=f"{algo}_")
+    road = RoadGraph(net_file=str(NET_FILE_PATH)) if algo != "static" else None
     rec  = TelemetryRecorder(algorithm=algo.upper())
 
     print(f"\n{'='*60}\n  Baseline: {algo.upper()}  ({steps} steps)\n{'='*60}")
@@ -84,16 +85,18 @@ def _reroute_cycle(algo: str, road: RoadGraph) -> bool:
             if not route:
                 continue
             cur_edge_id, dest_edge_id = traci.vehicle.getRoadID(vid), route[-1]
+            if cur_edge_id == dest_edge_id:
+                continue
             cur_uv, dest_uv = road.uv_of(cur_edge_id), road.uv_of(dest_edge_id)
             if cur_uv is None or dest_uv is None:
                 continue
 
-            src_node, dst_node = cur_uv[1], dest_uv[1]
-            new_path = road.dijkstra(src_node, dst_node) if algo == "dijkstra" \
-                       else road.astar(src_node, dst_node)
+            reverse_edge = road.edge_of(cur_uv[1], cur_uv[0])
+            new_path = road.dijkstra_edges(cur_edge_id, dest_edge_id, exclude_edge=reverse_edge) if algo == "dijkstra" \
+                       else road.astar_edges(cur_edge_id, dest_edge_id, exclude_edge=reverse_edge)
 
-            if new_path:
-                if commit_route(vid, [cur_edge_id] + new_path):
+            if new_path and len(new_path) > 1:
+                if commit_route(vid, new_path, road=road):
                     any_rerouted = True
         except Exception:
             continue

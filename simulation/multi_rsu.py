@@ -37,40 +37,7 @@ from collections import deque
 #
 # Edges are mapped to the RSU whose centroid is nearest.
 
-RSU_LAYOUT = {
-    "RSU_NW": dict(
-        x=0.0, y=1.0,
-        nodes=["N00","N01","N10","N11"],
-        edges=["E00_01","E01_00","E00_10","E10_00",
-               "E01_11","E11_01","E10_11","E11_10"],
-    ),
-    "RSU_NE": dict(
-        x=1.0, y=1.0,
-        nodes=["N01","N02","N11","N12"],
-        edges=["E01_02","E02_01","E11_12","E12_11",
-               "E01_11","E11_01","E02_12","E12_02"],
-    ),
-    "RSU_SW": dict(
-        x=0.0, y=0.0,
-        nodes=["N10","N11","N20","N21"],
-        edges=["E10_20","E20_10","E11_21","E21_11",
-               "E10_11","E11_10","E20_21","E21_20"],
-    ),
-    "RSU_SE": dict(
-        x=1.0, y=0.0,
-        nodes=["N11","N12","N21","N22"],
-        edges=["E11_12","E12_11","E21_22","E22_21",
-               "E12_22","E22_12","E11_21","E21_11"],
-    ),
-}
-
-# Neighbour pairs (bidirectional mesh links)
-RSU_NEIGHBORS = {
-    "RSU_NW": ["RSU_NE", "RSU_SW"],
-    "RSU_NE": ["RSU_NW", "RSU_SE"],
-    "RSU_SW": ["RSU_NW", "RSU_SE"],
-    "RSU_SE": ["RSU_NE", "RSU_SW"],
-}
+from topology_cache import RSU_LAYOUT, RSU_NEIGHBORS
 
 
 # ── Data structures ────────────────────────────────────────────────────────────

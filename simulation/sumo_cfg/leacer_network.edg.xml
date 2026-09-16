@@ -4,10 +4,10 @@
   <edge id="E01_00" from="N01" to="N00" numLanes="2" speed="16.67" priority="2"/>
   <edge id="E01_02" from="N01" to="N02" numLanes="2" speed="16.67" priority="2"/>
   <edge id="E02_01" from="N02" to="N01" numLanes="2" speed="16.67" priority="2"/>
-  <edge id="E10_11" from="N10" to="N11" numLanes="3" speed="16.67" priority="3"/>
-  <edge id="E11_10" from="N11" to="N10" numLanes="3" speed="16.67" priority="3"/>
-  <edge id="E11_12" from="N11" to="N12" numLanes="3" speed="16.67" priority="3"/>
-  <edge id="E12_11" from="N12" to="N11" numLanes="3" speed="16.67" priority="3"/>
+  <edge id="E10_11" from="N10" to="N11" numLanes="3" speed="16.67" priority="3" shape="0.0,500.0,0.0 150.0,500.0,0.5 300.0,500.0,3.5 420.0,500.0,7.0 500.0,500.0,8.0"/>
+  <edge id="E11_10" from="N11" to="N10" numLanes="3" speed="16.67" priority="3" shape="500.0,500.0,8.0 420.0,500.0,7.0 300.0,500.0,3.5 150.0,500.0,0.5 0.0,500.0,0.0"/>
+  <edge id="E11_12" from="N11" to="N12" numLanes="3" speed="16.67" priority="3" shape="500.0,500.0,8.0 580.0,500.0,7.0 700.0,500.0,3.5 850.0,500.0,0.5 1000.0,500.0,0.0"/>
+  <edge id="E12_11" from="N12" to="N11" numLanes="3" speed="16.67" priority="3" shape="1000.0,500.0,0.0 850.0,500.0,0.5 700.0,500.0,3.5 580.0,500.0,7.0 500.0,500.0,8.0"/>
   <edge id="E20_21" from="N20" to="N21" numLanes="2" speed="13.89" priority="2"/>
   <edge id="E21_20" from="N21" to="N20" numLanes="2" speed="13.89" priority="2"/>
   <edge id="E21_22" from="N21" to="N22" numLanes="2" speed="13.89" priority="2"/>
@@ -16,10 +16,10 @@
   <edge id="E10_00" from="N10" to="N00" numLanes="2" speed="13.89" priority="2"/>
   <edge id="E10_20" from="N10" to="N20" numLanes="2" speed="13.89" priority="2"/>
   <edge id="E20_10" from="N20" to="N10" numLanes="2" speed="13.89" priority="2"/>
-  <edge id="E01_11" from="N01" to="N11" numLanes="3" speed="16.67" priority="3"/>
-  <edge id="E11_01" from="N11" to="N01" numLanes="3" speed="16.67" priority="3"/>
-  <edge id="E11_21" from="N11" to="N21" numLanes="3" speed="16.67" priority="3"/>
-  <edge id="E21_11" from="N21" to="N11" numLanes="3" speed="16.67" priority="3"/>
+  <edge id="E01_11" from="N01" to="N11" numLanes="3" speed="16.67" priority="3" shape="500.0,1000.0,0.0 500.0,850.0,0.5 500.0,700.0,3.5 500.0,580.0,7.0 500.0,500.0,8.0"/>
+  <edge id="E11_01" from="N11" to="N01" numLanes="3" speed="16.67" priority="3" shape="500.0,500.0,8.0 500.0,580.0,7.0 500.0,700.0,3.5 500.0,850.0,0.5 500.0,1000.0,0.0"/>
+  <edge id="E11_21" from="N11" to="N21" numLanes="3" speed="16.67" priority="3" shape="500.0,500.0,8.0 500.0,420.0,7.0 500.0,300.0,3.5 500.0,150.0,0.5 500.0,0.0,0.0"/>
+  <edge id="E21_11" from="N21" to="N11" numLanes="3" speed="16.67" priority="3" shape="500.0,0.0,0.0 500.0,150.0,0.5 500.0,300.0,3.5 500.0,420.0,7.0 500.0,500.0,8.0"/>
   <edge id="E02_12" from="N02" to="N12" numLanes="2" speed="13.89" priority="2"/>
   <edge id="E12_02" from="N12" to="N02" numLanes="2" speed="13.89" priority="2"/>
   <edge id="E12_22" from="N12" to="N22" numLanes="2" speed="13.89" priority="2"/>

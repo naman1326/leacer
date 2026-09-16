@@ -36,20 +36,11 @@ sys.path.insert(0, str(SIM_DIR))
 
 from sumo_env import SUMOEnv
 from routing_utils import RoadGraph, TelemetryRecorder, commit_route
+from scenario_config import SUMOCFG_PATH, NET_FILE_PATH
 
 # ── Shared topology / state definition (mirrors train_ppo.py) ────────────────
-ALL_NODES = ["N00","N01","N02","N10","N11","N12","N20","N21","N22",
-             "IN_W","IN_N","IN_E","IN_S"]
-ADJACENCY = {
-    "N00": ["N01","N10"],  "N01": ["N00","N02","N11"],
-    "N02": ["N01","N12"],  "N10": ["N00","N11","N20"],
-    "N11": ["N01","N10","N12","N21"], "N12": ["N02","N11","N22"],
-    "N20": ["N10","N21"],  "N21": ["N11","N20","N22"],
-    "N22": ["N12","N21"],
-    "IN_W": ["N00","N10","N20"], "IN_N": ["N00","N01","N02"],
-    "IN_E": ["N02","N12","N22"], "IN_S": ["N20","N21","N22"],
-}
-EMB_DIM, STATE_DIM, MAX_ACTIONS = 8, 2*8 + 4 + 1, 4
+from topology_cache import ADJACENCY, ALL_NODES
+EMB_DIM, STATE_DIM, MAX_ACTIONS = 8, 2*8 + 4 + 1, 5
 ALPHA, BETA, GAMMA, DELTA = 0.35, 0.25, 0.25, 0.15
 
 def mo_cost(speed_kmh, queue, latency_ms, density):
@@ -179,9 +170,9 @@ def evaluate(steps=3600, use_gui=False):
         print("[WARN] No trained weights — run --mode train first for a fair comparison.")
     policy.eval()
 
-    cfg  = str(SIM_DIR / "sumo_cfg" / "leacer.sumocfg")
-    env  = SUMOEnv(cfg_path=cfg, use_gui=use_gui, max_steps=steps)
-    road = RoadGraph()
+    cfg  = str(SUMOCFG_PATH)
+    env  = SUMOEnv(cfg_path=cfg, use_gui=use_gui, max_steps=steps, output_prefix="dqn_")
+    road = RoadGraph(net_file=str(NET_FILE_PATH))
     rec  = TelemetryRecorder(algorithm="DQN_CLOUDRL")
 
     tsv_history = deque(maxlen=LATENCY_STALE_STEPS + 1)
@@ -227,6 +218,28 @@ def _dqn_reroute_cycle(policy, road, stale_states, node_emb, mu, sig):
             route = traci.vehicle.getRoute(vid)
             if not route: continue
             cur_edge, dest_edge = traci.vehicle.getRoadID(vid), route[-1]
+            if cur_edge == dest_edge: continue
+
+            cur_uv, dest_uv = road.uv_of(cur_edge), road.uv_of(dest_edge)
+            if cur_uv is None or dest_uv is None: continue
+            cur_node = cur_uv[1]
+
+            outgoing_edges = road.get_outgoing_edges(cur_edge)
+            if not outgoing_edges: continue
+            candidate_nodes = {}
+            for out_eid in outgoing_edges:
+                out_uv = road.uv_of(out_eid)
+                if out_uv and out_uv[1] != cur_uv[0]:
+                    candidate_nodes[out_uv[1]] = out_eid
+            if not candidate_nodes: continue
+
+            nb = sorted(ADJACENCY.get(cur_node, []))
+            if not nb: continue
+            mask = np.zeros(MAX_ACTIONS, dtype=bool)
+            for i, node in enumerate(nb[:MAX_ACTIONS]):
+                if node in candidate_nodes:
+                    mask[i] = True
+            if not mask.any(): continue
 
             s = stale_by_edge.get(cur_edge)
             tsv = (np.array([s.mean_speed*3.6, s.mean_density,
@@ -234,28 +247,21 @@ def _dqn_reroute_cycle(policy, road, stale_states, node_emb, mu, sig):
                    if s is not None else np.array([40.,10.,2.,80.]))
             tsv_norm = (tsv - mu) / sig
 
-            cur_uv, dest_uv = road.uv_of(cur_edge), road.uv_of(dest_edge)
-            if cur_uv is None or dest_uv is None: continue
-            cur_node = cur_uv[1]
-
             state = np.concatenate([node_emb.get(cur_node, np.zeros(EMB_DIM)),
-                                    node_emb.get("N22", np.zeros(EMB_DIM)),
+                                    node_emb.get(dest_uv[1], np.zeros(EMB_DIM)),
                                     tsv_norm, [0.5]]).astype(np.float32)
-
-            nb = sorted(ADJACENCY.get(cur_node, []))
-            if not nb: continue
-            mask = np.zeros(MAX_ACTIONS, dtype=bool); mask[:len(nb)] = True
 
             with torch.no_grad():
                 q = policy(torch.tensor(state, dtype=torch.float32).unsqueeze(0)).squeeze(0)
                 q[~torch.tensor(mask)] = -1e9
-                a = min(int(q.argmax()), len(nb)-1)
+                a = int(q.argmax())
             next_node = nb[a]
+            first_edge = candidate_nodes[next_node]
 
-            rest = road.dijkstra(next_node, dest_uv[1])
-            first_edge = road.edge_of(cur_node, next_node)
-            if rest is not None and first_edge:
-                if commit_route(vid, [cur_edge, first_edge] + rest):
+            rest = road.dijkstra_edges(first_edge, dest_edge)
+            if rest:
+                candidate_route = [cur_edge] + rest
+                if commit_route(vid, candidate_route, road=road):
                     any_rerouted = True
         except Exception:
             continue

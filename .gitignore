@@ -162,6 +162,9 @@ __pycache__/
 # Allow specific configuration files
 !simulation/sumo_cfg/*.xml
 !simulation/sumo_cfg/*.sumocfg
+!simulation/most_scenario/**/*.xml
+!simulation/most_scenario/**/*.sumocfg
+!simulation/most_scenario/**/*.py
 
 # Ignore simulation results and generated plots
 simulation/results/*
@@ -175,6 +178,10 @@ simulation/results/plots/*
 !simulation/data/*.pt
 !simulation/data/*.npz
 !simulation/data/*.png
+
+# Allow root data folder and assets
+!data/
+!data/*
 
 # Allow visualization source
 !LEACER.drawio

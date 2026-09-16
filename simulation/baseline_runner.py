@@ -178,17 +178,25 @@ class BaselineRunner:
 
     def __init__(self, algorithm: str = "dijkstra",
                  max_steps: int = 3600,
-                 results_dir: str = None):
+                 results_dir: str = None,
+                 use_gui: bool = False,
+                 **kwargs):
         if algorithm not in self.ALGO_PARAMS:
             raise ValueError(f"Unknown algorithm: {algorithm}")
         
+        if "gui" in kwargs:
+            use_gui = bool(kwargs["gui"])
+        elif "use_sumo_gui" in kwargs:
+            use_gui = bool(kwargs["use_sumo_gui"])
+
         script_dir = Path(__file__).parent
         self.results_dir = Path(results_dir) if results_dir else script_dir / "results"
         self.results_dir.mkdir(exist_ok=True, parents=True)
 
         self.algorithm   = algorithm
         self.max_steps   = max_steps
-        self.env = SUMOEnv(max_steps=max_steps)
+        prefix = kwargs.get("output_prefix", f"{algorithm.lower()}_")
+        self.env = SUMOEnv(max_steps=max_steps, use_gui=use_gui, output_prefix=prefix)
         self._records: List[StepRecord] = []
         self.params = self.ALGO_PARAMS[algorithm]
 

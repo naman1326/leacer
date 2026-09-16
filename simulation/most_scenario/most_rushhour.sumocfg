@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    MoST (Monaco SUMO Traffic) Scenario — cropped to AM rush hour.
+    Original scenario: Codeca & Härri, "Monaco SUMO Traffic (MoST)
+    Scenario: A 3D Mobility Scenario for Cooperative ITS", SUMO2018.
+    Source: https://github.com/lcodeca/MoSTScenario (GPLv3)
+
+    Changes from the original most.sumocfg:
+      - Time window cropped to 25200-32400s (07:00-09:00) instead of
+        the full 04:00-14:00 default -> ~2,200 vehicles instead of ~46,800
+      - Dropped bus/train/pedestrian/special route files entirely
+        (not relevant to vehicular routing comparison, and pedestrian
+        routes alone were 33MB)
+      - step-length reset to 1.0s to match LEACER's existing
+        REROUTE_INTERVAL constants (MoST's own default is 0.25s)
+-->
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="in/most.net.xml"/>
+        <route-files value="in/route/most.passenger.rou.xml,in/route/most.commercial.rou.xml,in/route/most.highway.flows.xml"/>
+        <additional-files value="in/add/basic.vType.xml,in/add/most.poly.xml"/>
+    </input>
+
+    <output>
+        <summary-output value="../results/summary.xml"/>
+        <tripinfo-output value="../results/tripinfo.xml"/>
+        <queue-output value="../results/queues.xml"/>
+        <emission-output value="../results/emissions.xml"/>
+    </output>
+
+    <time>
+        <begin value="25200"/>
+        <step-length value="1"/>
+        <end value="32400"/>
+    </time>
+
+    <processing>
+        <ignore-route-errors value="true"/>
+        <lateral-resolution value="0.3"/>
+        <ignore-junction-blocker value="30"/>
+        <collision.action value="none"/>
+        <time-to-teleport value="120"/>
+        <max-depart-delay value="900"/>
+        <default.emergencydecel value="decel"/>
+    </processing>
+
+    <routing>
+        <device.rerouting.probability value="0"/>
+        <!-- LEACER/baselines drive rerouting themselves via TraCI setRoute;
+             MoST's own built-in rerouting device is disabled to avoid the
+             two systems fighting over the same vehicles. -->
+    </routing>
+
+    <report>
+        <verbose value="true"/>
+        <duration-log.statistics value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="42"/>
+    </random_number>
+
+</configuration>

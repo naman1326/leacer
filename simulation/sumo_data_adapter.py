@@ -62,12 +62,12 @@ class SUMODataAdapter:
     """
 
     def __init__(self,
-                 edge_lengths: Dict[str, float],
+                 edge_lengths: Optional[Dict[str, float]] = None,
                  obu_sample_rate: float = 0.6):
         """
         obu_sample_rate: fraction of vehicles that are V2X-equipped [0-1].
         """
-        self.edge_lengths    = edge_lengths
+        self.edge_lengths    = edge_lengths or {}
         self.obu_sample_rate = obu_sample_rate
 
         # One RSUAggregator per RSU site
@@ -77,7 +77,7 @@ class SUMODataAdapter:
 
         # DTSA instances per RSU
         self.dtsas: Dict[str, DTSA] = {
-            rsu_id: DTSA(edge_lengths, rsu) for rsu_id, rsu in self.rsus.items()
+            rsu_id: DTSA(self.edge_lengths, rsu) for rsu_id, rsu in self.rsus.items()
         }
 
         self._veh_counter = 0
@@ -98,13 +98,29 @@ class SUMODataAdapter:
                 self._inject_obu(rsu, es, t_now)
                 self._inject_signal(rsu, es, t_now)
 
-        # Compute TSVs from each DTSA, merge (last-write wins per edge)
+        # Baseline TSVs from all active EdgeState records (ensures 100% network coverage)
         tsv_map: Dict[str, TrafficStateVector] = {}
+        for es in edge_states:
+            tsv_map[es.edge_id] = TrafficStateVector(
+                edge_id=es.edge_id,
+                timestamp=t_now,
+                S=float(es.mean_speed * 3.6),
+                D=float(es.mean_density),
+                Q=int(es.queue_length),
+                L=float(es.travel_time),
+                confidence=1.0,
+                source_mask=7,
+            )
+
+        # Compute TSVs from each DTSA where coverage exists, merge
         for rsu_id, dtsa in self.dtsas.items():
-            for eid in RSU_COVERAGE[rsu_id]:
+            for eid in RSU_COVERAGE.get(rsu_id, []):
                 if eid in state_map:
-                    tsv = dtsa.compute_tsv(eid)
-                    tsv_map[eid] = tsv
+                    try:
+                        tsv = dtsa.compute_tsv(eid)
+                        tsv_map[eid] = tsv
+                    except Exception:
+                        pass
         return tsv_map
 
     def _rsus_for_edge(self, edge_id: str) -> List[str]:
@@ -152,6 +168,10 @@ class SUMODataAdapter:
             cycle_length_sec= 90.0,
             queue_length_veh= es.queue_length,
         ))
+
+
+# Alias for case consistency across leacer_runner and baselines
+SumoDataAdapter = SUMODataAdapter
 
 
 # ─────────────────────────────────────────────────────────────────────────────
