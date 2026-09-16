@@ -23,7 +23,85 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 
+def find_sumo_home() -> Optional[str]:
+    """Auto-detect valid SUMO_HOME directory."""
+    candidates = []
+    # 1. os.environ if valid
+    if "SUMO_HOME" in os.environ and os.environ["SUMO_HOME"]:
+        candidates.append(os.environ["SUMO_HOME"])
+
+    # 2. Windows registry / user environment
+    try:
+        import winreg
+        for root in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+            for subkey in (r"Environment", r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"):
+                try:
+                    with winreg.OpenKey(root, subkey) as key:
+                        val, _ = winreg.QueryValueEx(key, "SUMO_HOME")
+                        if val:
+                            candidates.append(val)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # 3. Known installation locations
+    user_home = Path.home()
+    candidates.extend([
+        str(user_home / "Downloads" / "sumo-1.27.1"),
+        *([str(p) for p in (user_home / "Downloads").glob("sumo*") if p.is_dir()]),
+        r"C:\Program Files\Eclipse\Sumo",
+        r"C:\Program Files (x86)\Eclipse\Sumo",
+        r"C:\sumo",
+        r"D:\sumo",
+    ])
+
+    for c in candidates:
+        if not c:
+            continue
+        p = Path(c).resolve()
+        if (p / "bin" / "sumo-gui.exe").exists() or (p / "bin" / "sumo.exe").exists() or (p / "bin" / "sumo").exists():
+            return str(p)
+    return None
+
+
+def get_sumo_binaries() -> Tuple[str, str]:
+    """Return verified (sumo_binary, sumo_gui) paths."""
+    home = find_sumo_home()
+    if home:
+        os.environ["SUMO_HOME"] = home
+        tools = os.path.join(home, "tools")
+        if tools not in sys.path:
+            sys.path.insert(0, tools)
+
+        gui_candidates = [
+            os.path.join(home, "bin", "sumo-gui.exe"),
+            os.path.join(home, "bin", "sumo-gui"),
+        ]
+        cli_candidates = [
+            os.path.join(home, "bin", "sumo.exe"),
+            os.path.join(home, "bin", "sumo"),
+        ]
+        gui_bin = next((b for b in gui_candidates if os.path.exists(b)), None)
+        cli_bin = next((b for b in cli_candidates if os.path.exists(b)), None)
+        if cli_bin and gui_bin:
+            return cli_bin, gui_bin
+
+    try:
+        import sumolib
+        return sumolib.checkBinary("sumo"), sumolib.checkBinary("sumo-gui")
+    except Exception:
+        pass
+
+    import shutil
+    cli = shutil.which("sumo.exe") or shutil.which("sumo") or "sumo"
+    gui = shutil.which("sumo-gui.exe") or shutil.which("sumo-gui") or "sumo-gui"
+    return cli, gui
+
+
 # ── TraCI import (graceful fallback for environments without SUMO) ──────────
+SUMO_BINARY, SUMO_GUI = get_sumo_binaries()
+
 try:
     import traci
     import traci.constants as tc
@@ -42,9 +120,11 @@ SUMO_CFG_DIR  = Path(__file__).parent / "sumo_cfg"
 RESULTS_DIR   = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
-DEFAULT_CFG   = SUMO_CFG_DIR / "leacer.sumocfg"
-SUMO_BINARY   = os.path.join(os.environ.get("SUMO_HOME", r"C:\Program Files (x86)\Eclipse\Sumo"), "bin", "sumo.exe")
-SUMO_GUI      = os.path.join(os.environ.get("SUMO_HOME", r"C:\Program Files (x86)\Eclipse\Sumo"), "bin", "sumo-gui.exe")
+try:
+    from scenario_config import SUMOCFG_PATH
+    DEFAULT_CFG = SUMOCFG_PATH
+except Exception:
+    DEFAULT_CFG = SUMO_CFG_DIR / "leacer.sumocfg"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Data Classes
@@ -122,13 +202,15 @@ class SUMOEnv:
         metrics = env.stop()
     """
 
-    # TraCI subscriptions — what we pull every step per edge
+    # TraCI subscriptions — what we pull every step per edge in a single batch
     EDGE_SUBS = [
         tc.LAST_STEP_VEHICLE_NUMBER,
         tc.LAST_STEP_MEAN_SPEED,
         tc.LAST_STEP_OCCUPANCY,
         tc.LAST_STEP_VEHICLE_HALTING_NUMBER,
         tc.VAR_CURRENT_TRAVELTIME,
+        tc.VAR_CO2EMISSION,
+        tc.VAR_NOISEEMISSION,
     ]
 
     def __init__(self,
@@ -136,18 +218,38 @@ class SUMOEnv:
                  use_gui:     bool  = False,
                  step_length: float = 1.0,
                  seed:        int   = 42,
-                 max_steps:   int   = 3600):
+                 max_steps:   int   = 3600,
+                 output_prefix: Optional[str] = None,
+                 **kwargs):
 
-        self.cfg_path    = cfg_path or str(DEFAULT_CFG)
-        self.use_gui     = use_gui
-        self.step_length = step_length
-        self.seed        = seed
-        self.max_steps   = max_steps
+        if "gui" in kwargs:
+            use_gui = bool(kwargs["gui"])
+        elif "use_sumo_gui" in kwargs:
+            use_gui = bool(kwargs["use_sumo_gui"])
+
+        self.cfg_path      = cfg_path or str(DEFAULT_CFG)
+        self.use_gui       = use_gui
+        self.step_length   = step_length
+        self.seed          = seed
+        self.max_steps     = max_steps
+        if output_prefix is not None:
+            self.output_prefix = output_prefix
+        elif "output_prefix" in kwargs:
+            self.output_prefix = kwargs["output_prefix"]
+        else:
+            self.output_prefix = "leacer_"
+        self.output_options = {
+            "summary-output":  kwargs.get("summary_output"),
+            "emission-output": kwargs.get("emission_output"),
+            "tripinfo-output": kwargs.get("tripinfo_output"),
+            "queue-output":    kwargs.get("queue_output"),
+        }
 
         self._step       = 0
         self._running    = False
-        self._edge_ids:  List[str] = []
-        self._veh_ids:   List[str] = []
+        self._edge_ids:     List[str] = []
+        self._edge_lengths: Dict[str, float] = {}
+        self._veh_ids:      List[str] = []
 
         # Telemetry buffers
         self._edge_history: List[List[EdgeState]] = []
@@ -158,7 +260,7 @@ class SUMOEnv:
         self._departed:  Dict[str, float] = {}   # veh_id → departure sim_time
         self._arrived:   List[Tuple[str, float, float]] = []  # (id, dep, arr)
 
-        print(f"[SUMOEnv] Initialized  cfg={self.cfg_path}  gui={use_gui}")
+        print(f"[SUMOEnv] Initialized  cfg={self.cfg_path}  gui={use_gui}  prefix={self.output_prefix}")
 
     # ─────────────────────────────────────────────────────────────────────
     # Lifecycle
@@ -180,8 +282,15 @@ class SUMOEnv:
             "--waiting-time-memory", "100",
         ]
 
+        if self.output_prefix:
+            cmd.extend(["--output-prefix", str(self.output_prefix)])
+
+        for opt, val in self.output_options.items():
+            if val:
+                cmd.extend([f"--{opt}", str(val)])
+
         if self.use_gui:
-            cmd.extend(["--start", "true", "--quit-on-end", "true"])
+            cmd.extend(["--start", "--quit-on-end"])
 
         traci.start(cmd)
 
@@ -282,7 +391,7 @@ class SUMOEnv:
             return self._get_edge_states_mock()
 
     def _get_edge_states_traci(self) -> List[EdgeState]:
-        """Pull subscribed values from TraCI."""
+        """Pull subscribed values from TraCI in memory (O(1) per edge, zero network calls)."""
         sim_time = traci.simulation.getTime()
         states = []
         for eid in self._edge_ids:
@@ -295,19 +404,10 @@ class SUMOEnv:
             occ      = sub.get(tc.LAST_STEP_OCCUPANCY, 0.0)
             halting  = sub.get(tc.LAST_STEP_VEHICLE_HALTING_NUMBER, 0)
             tt       = sub.get(tc.VAR_CURRENT_TRAVELTIME, 0.0)
-            co2      = traci.edge.getCO2Emission(eid)
-            noise    = traci.edge.getNoiseEmission(eid)
-
-            try:
-                length_km = traci.lane.getLength(eid + "_0") / 1000.0
-            except Exception:
-                length_km = 0.5
-            density    = count / max(length_km, 0.01)
-            # throughput = traci.edge.getLastStepVehicleIDs(eid) # This can be very large output, better use count if needed, but let's keep it if small
-            
-            # Using count as proxy if getLastStepVehicleIDs is not subscribed
-            tp_ids = traci.edge.getLastStepVehicleIDs(eid)
-            tp_count = len(tp_ids)
+            co2      = sub.get(tc.VAR_CO2EMISSION, 0.0)
+            noise    = sub.get(tc.VAR_NOISEEMISSION, 0.0)
+            length_km = self.get_edge_length(eid) / 1000.0
+            density  = count / max(length_km, 0.01)
 
             states.append(EdgeState(
                 edge_id=eid, step=self._step, sim_time=sim_time,
@@ -315,7 +415,7 @@ class SUMOEnv:
                 occupancy=occ, mean_density=density,
                 queue_length=halting, travel_time=tt,
                 co2_mg_s=co2, noise_db=noise,
-                throughput=tp_count
+                throughput=count
             ))
         return states
 
@@ -451,10 +551,14 @@ class SUMOEnv:
         return self._step >= self.max_steps
 
     def get_edge_length(self, edge_id: str) -> float:
-        """Return edge length in metres."""
+        """Return edge length in metres (cached)."""
+        if edge_id in self._edge_lengths:
+            return self._edge_lengths[edge_id]
         if TRACI_AVAILABLE:
             try:
-                return traci.lane.getLength(edge_id + "_0")
+                l = traci.lane.getLength(edge_id + "_0")
+                self._edge_lengths[edge_id] = l
+                return l
             except Exception:
                 return 500.0
         return self._edge_lengths.get(edge_id, 500.0)

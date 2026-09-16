@@ -31,6 +31,7 @@ sys.path.insert(0, str(SIM_DIR))
 
 from sumo_env import SUMOEnv
 from routing_utils import RoadGraph, TelemetryRecorder, commit_route
+from scenario_config import SUMOCFG_PATH, NET_FILE_PATH
 
 DATA_DIR = SIM_DIR / "data"
 
@@ -87,7 +88,7 @@ def _node_features(road, node_order, node_idx, edge_states):
 
 
 def _collect_rollout(road, node_order, node_idx, steps, use_gui):
-    cfg = str(SIM_DIR / "sumo_cfg" / "leacer.sumocfg")
+    cfg = str(SUMOCFG_PATH)
     env = SUMOEnv(cfg_path=cfg, use_gui=use_gui, max_steps=steps)
     env.start()
     feats = []
@@ -101,7 +102,7 @@ def _collect_rollout(road, node_order, node_idx, steps, use_gui):
 
 def train(rollout_steps=400, epochs=60, use_gui=False):
     print("="*60); print("GCN-Route Self-Supervised Pretraining"); print("="*60)
-    road = RoadGraph()
+    road = RoadGraph(net_file=str(NET_FILE_PATH))
     node_order = road.nodes
     node_idx = {n: i for i, n in enumerate(node_order)}
     A_norm = normalise_adjacency(road.G, node_order)
@@ -139,7 +140,7 @@ def train(rollout_steps=400, epochs=60, use_gui=False):
 def evaluate(steps=3600, update_interval=50, use_gui=False):
     print("="*60); print(f"GCN-Route Evaluation — {steps} steps, update every {update_interval}"); print("="*60)
 
-    road = RoadGraph()
+    road = RoadGraph(net_file=str(NET_FILE_PATH))
     node_order = road.nodes
     node_idx = {n: i for i, n in enumerate(node_order)}
     A_norm = normalise_adjacency(road.G, node_order)
@@ -156,8 +157,8 @@ def evaluate(steps=3600, update_interval=50, use_gui=False):
         print("[WARN] No pretrained GCN weights — run --mode train first for a fair comparison.")
     model.eval()
 
-    cfg = str(SIM_DIR / "sumo_cfg" / "leacer.sumocfg")
-    env = SUMOEnv(cfg_path=cfg, use_gui=use_gui, max_steps=steps)
+    cfg = str(SUMOCFG_PATH)
+    env = SUMOEnv(cfg_path=cfg, use_gui=use_gui, max_steps=steps, output_prefix="gcn_")
     rec = TelemetryRecorder(algorithm="GCN_ROUTE")
 
     env.start()
@@ -197,7 +198,13 @@ def _gcn_reroute_cycle(model, road, node_order, node_idx, A_norm, edge_states, m
     for u, v, data in road.G.edges(data=True):
         desirability = (pred_speed[node_idx[u]] + pred_speed[node_idx[v]]) / 2.0
         base_weight = data["length"] / max(data["speed"], 0.1)
-        data["weight"] = base_weight * float(np.exp(-desirability))
+        w = base_weight * float(np.exp(-desirability))
+        data["weight"] = w
+        eid = data["id"]
+        if hasattr(road, "G_edge") and eid in road.G_edge:
+            road.G_edge.nodes[eid]["weight"] = w
+            for in_u, _, in_d in road.G_edge.in_edges(eid, data=True):
+                in_d["weight"] = w
 
     veh_ids = traci.vehicle.getIDList()
     if not veh_ids: return False
@@ -208,12 +215,14 @@ def _gcn_reroute_cycle(model, road, node_order, node_idx, A_norm, edge_states, m
             route = traci.vehicle.getRoute(vid)
             if not route: continue
             cur_edge, dest_edge = traci.vehicle.getRoadID(vid), route[-1]
+            if cur_edge == dest_edge: continue
             cur_uv, dest_uv = road.uv_of(cur_edge), road.uv_of(dest_edge)
             if cur_uv is None or dest_uv is None: continue
 
-            new_path = road.dijkstra(cur_uv[1], dest_uv[1])
-            if new_path:
-                if commit_route(vid, [cur_edge] + new_path):
+            reverse_edge = road.edge_of(cur_uv[1], cur_uv[0])
+            new_path = road.dijkstra_edges(cur_edge, dest_edge, exclude_edge=reverse_edge)
+            if new_path and len(new_path) > 1:
+                if commit_route(vid, new_path, road=road):
                     any_rerouted = True
         except Exception:
             continue

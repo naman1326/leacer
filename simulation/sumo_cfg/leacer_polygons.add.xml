@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additionals>
+  <!-- ====================================================================== -->
+  <!-- LEACER High-Fidelity 2D/3D Urban Environment Architecture               -->
+  <!-- Optimized for smooth 60+ FPS on RTX 3050 GPU (8GB VRAM)                 -->
+  <!-- ====================================================================== -->
+
+  <!-- ────────────────────────────────────────────────────────────────────── -->
+  <!-- 1. WATER BODIES (Blue Palettes: 41,128,185 & 52,152,219)               -->
+  <!-- ────────────────────────────────────────────────────────────────────── -->
+  <!-- Northeast Urban Lake & Marina Basin -->
+  <poly id="water_marina_lake" type="water" color="41,128,185" fill="true" layer="-3"
+        shape="620.0,660.0 920.0,660.0 940.0,780.0 880.0,920.0 680.0,920.0 620.0,800.0"/>
+
+  <!-- Grand Diagonal Canal & River Network -->
+  <poly id="water_main_river_canal" type="water" color="41,128,185" fill="true" layer="-3"
+        shape="620.0,760.0 550.0,760.0 540.0,600.0 460.0,400.0 450.0,200.0 430.0,-50.0 430.0,-180.0 470.0,-180.0 470.0,-50.0 490.0,200.0 500.0,400.0 570.0,570.0 620.0,700.0"/>
+
+  <!-- Civic Plaza Reflecting Pool -->
+  <poly id="water_reflecting_pool_sw" type="water" color="52,152,219" fill="true" layer="-2"
+        shape="220.0,220.0 280.0,220.0 280.0,280.0 220.0,280.0"/>
+
+  <!-- Northwest Botanical Pond -->
+  <poly id="water_pond_nw" type="water" color="52,152,219" fill="true" layer="-2"
+        shape="200.0,720.0 270.0,720.0 290.0,770.0 250.0,810.0 190.0,780.0"/>
+
+  <!-- ────────────────────────────────────────────────────────────────────── -->
+  <!-- 2. PARKS & GREEN SPACES (color="107,142,35" as specified)              -->
+  <!-- ────────────────────────────────────────────────────────────────────── -->
+  <!-- Northwest Central Urban Park & Arboretum -->
+  <poly id="park_nw_central" type="park" color="107,142,35" fill="true" layer="-2"
+        shape="60.0,560.0 440.0,560.0 440.0,940.0 60.0,940.0"/>
+  <poly id="park_nw_lawn_inner" type="park" color="107,142,35" fill="true" layer="-1"
+        shape="120.0,620.0 380.0,620.0 380.0,880.0 120.0,880.0"/>
+
+  <!-- Southwest Eco-Reserve & Botanical Grounds -->
+  <poly id="park_sw_botanical" type="park" color="107,142,35" fill="true" layer="-2"
+        shape="60.0,60.0 440.0,60.0 440.0,440.0 60.0,440.0"/>
+  <poly id="park_sw_grove" type="park" color="107,142,35" fill="true" layer="-1"
+        shape="100.0,100.0 400.0,100.0 400.0,400.0 100.0,400.0"/>
+
+  <!-- Northeast Waterfront Promenade Greenbelt -->
+  <poly id="park_ne_waterfront" type="park" color="107,142,35" fill="true" layer="-2"
+        shape="560.0,560.0 940.0,560.0 940.0,940.0 560.0,940.0"/>
+
+  <!-- Southeast Sports Complex & Recreation Grounds -->
+  <poly id="park_se_recreation" type="park" color="107,142,35" fill="true" layer="-2"
+        shape="560.0,60.0 940.0,60.0 940.0,440.0 560.0,440.0"/>
+
+  <!-- Gateway Boulevard Greenways -->
+  <poly id="park_gateway_north" type="park" color="107,142,35" fill="true" layer="-2"
+        shape="460.0,1020.0 540.0,1020.0 540.0,1180.0 460.0,1180.0"/>
+  <poly id="park_gateway_south" type="park" color="107,142,35" fill="true" layer="-2"
+        shape="460.0,-20.0 540.0,-20.0 540.0,-180.0 460.0,-180.0"/>
+  <poly id="park_gateway_west" type="park" color="107,142,35" fill="true" layer="-2"
+        shape="-180.0,460.0 -20.0,460.0 -20.0,540.0 -180.0,540.0"/>
+  <poly id="park_gateway_east" type="park" color="107,142,35" fill="true" layer="-2"
+        shape="1020.0,460.0 1180.0,460.0 1180.0,540.0 1020.0,540.0"/>
+
+  <!-- ────────────────────────────────────────────────────────────────────── -->
+  <!-- 3. EXTRUDED 3D BUILDINGS (shape3D & height attributes)                  -->
+  <!-- ────────────────────────────────────────────────────────────────────── -->
+
+  <!-- DOWNTOWN FINANCIAL DISTRICT / CENTRAL N11 HUB -->
+  <poly id="bldg_dt_apex_tower" type="building" color="185,200,220" fill="true" layer="1"
+        height="78.0" shape3D="true"
+        shape="540.0,540.0 600.0,540.0 600.0,600.0 540.0,600.0"/>
+
+  <poly id="bldg_dt_leacer_hq" type="building" color="210,225,240" fill="true" layer="1"
+        height="70.0" shape3D="true"
+        shape="400.0,540.0 460.0,540.0 460.0,600.0 400.0,600.0"/>
+
+  <poly id="bldg_dt_finance_one" type="building" color="175,190,210" fill="true" layer="1"
+        height="64.0" shape3D="true"
+        shape="540.0,400.0 600.0,400.0 600.0,460.0 540.0,460.0"/>
+
+  <poly id="bldg_dt_innovation_spire" type="building" color="195,205,225" fill="true" layer="1"
+        height="68.0" shape3D="true"
+        shape="400.0,400.0 460.0,400.0 460.0,460.0 400.0,460.0"/>
+
+  <poly id="bldg_dt_civic_concourse" type="building" color="220,220,225" fill="true" layer="1"
+        height="28.0" shape3D="true"
+        shape="465.0,525.0 535.0,525.0 535.0,545.0 465.0,545.0"/>
+
+  <poly id="bldg_dt_south_concourse" type="building" color="220,220,225" fill="true" layer="1"
+        height="28.0" shape3D="true"
+        shape="465.0,455.0 535.0,455.0 535.0,475.0 465.0,475.0"/>
+
+  <!-- NORTHWEST INNOVATION & TECH CAMPUS -->
+  <poly id="bldg_nw_tech_lab1" type="building" color="165,180,195" fill="true" layer="1"
+        height="36.0" shape3D="true"
+        shape="90.0,850.0 160.0,850.0 160.0,910.0 90.0,910.0"/>
+  <poly id="bldg_nw_tech_lab2" type="building" color="180,190,205" fill="true" layer="1"
+        height="32.0" shape3D="true"
+        shape="180.0,850.0 250.0,850.0 250.0,910.0 180.0,910.0"/>
+  <poly id="bldg_nw_tech_lab3" type="building" color="170,185,200" fill="true" layer="1"
+        height="42.0" shape3D="true"
+        shape="270.0,850.0 340.0,850.0 340.0,910.0 270.0,910.0"/>
+  <poly id="bldg_nw_quantum_ctr" type="building" color="200,215,230" fill="true" layer="1"
+        height="48.0" shape3D="true"
+        shape="360.0,850.0 430.0,850.0 430.0,910.0 360.0,910.0"/>
+
+  <poly id="bldg_nw_rnd_center" type="building" color="175,185,195" fill="true" layer="1"
+        height="38.0" shape3D="true"
+        shape="90.0,750.0 160.0,750.0 160.0,810.0 90.0,810.0"/>
+  <poly id="bldg_nw_cyber_hall" type="building" color="190,200,210" fill="true" layer="1"
+        height="34.0" shape3D="true"
+        shape="360.0,750.0 430.0,750.0 430.0,810.0 360.0,810.0"/>
+
+  <poly id="bldg_nw_mobility_hub" type="building" color="185,195,205" fill="true" layer="1"
+        height="30.0" shape3D="true"
+        shape="90.0,650.0 160.0,650.0 160.0,710.0 90.0,710.0"/>
+  <poly id="bldg_nw_analytics_bldg" type="building" color="170,180,195" fill="true" layer="1"
+        height="40.0" shape3D="true"
+        shape="360.0,650.0 430.0,650.0 430.0,710.0 360.0,710.0"/>
+
+  <poly id="bldg_nw_datacenter" type="building" color="155,165,180" fill="true" layer="1"
+        height="24.0" shape3D="true"
+        shape="190.0,590.0 310.0,590.0 310.0,630.0 190.0,630.0"/>
+
+  <!-- NORTHEAST WATERFRONT & MARINA DISTRICT -->
+  <poly id="bldg_ne_waterfront_tower1" type="building" color="205,220,235" fill="true" layer="1"
+        height="56.0" shape3D="true"
+        shape="580.0,840.0 640.0,840.0 640.0,900.0 580.0,900.0"/>
+  <poly id="bldg_ne_waterfront_tower2" type="building" color="195,210,225" fill="true" layer="1"
+        height="52.0" shape3D="true"
+        shape="580.0,740.0 640.0,740.0 640.0,800.0 580.0,800.0"/>
+
+  <poly id="bldg_ne_hotel_grand" type="building" color="215,225,235" fill="true" layer="1"
+        height="62.0" shape3D="true"
+        shape="860.0,840.0 920.0,840.0 920.0,900.0 860.0,900.0"/>
+  <poly id="bldg_ne_marina_club" type="building" color="225,230,240" fill="true" layer="1"
+        height="26.0" shape3D="true"
+        shape="860.0,740.0 920.0,740.0 920.0,800.0 860.0,800.0"/>
+
+  <poly id="bldg_ne_expo_center" type="building" color="185,195,210" fill="true" layer="1"
+        height="35.0" shape3D="true"
+        shape="680.0,580.0 820.0,580.0 820.0,630.0 680.0,630.0"/>
+
+  <!-- SOUTHWEST ACADEMIC, RESEARCH & MEDICAL QUARTER -->
+  <poly id="bldg_sw_med_ctr1" type="building" color="225,230,235" fill="true" layer="1"
+        height="44.0" shape3D="true"
+        shape="90.0,350.0 160.0,350.0 160.0,420.0 90.0,420.0"/>
+  <poly id="bldg_sw_med_ctr2" type="building" color="215,225,230" fill="true" layer="1"
+        height="38.0" shape3D="true"
+        shape="180.0,350.0 250.0,350.0 250.0,420.0 180.0,420.0"/>
+  <poly id="bldg_sw_univ_hall" type="building" color="190,195,205" fill="true" layer="1"
+        height="32.0" shape3D="true"
+        shape="270.0,350.0 340.0,350.0 340.0,420.0 270.0,420.0"/>
+  <poly id="bldg_sw_library" type="building" color="200,205,215" fill="true" layer="1"
+        height="28.0" shape3D="true"
+        shape="360.0,350.0 430.0,350.0 430.0,420.0 360.0,420.0"/>
+
+  <poly id="bldg_sw_res_a1" type="building" color="180,185,195" fill="true" layer="1"
+        height="30.0" shape3D="true"
+        shape="90.0,250.0 150.0,250.0 150.0,310.0 90.0,310.0"/>
+  <poly id="bldg_sw_res_a2" type="building" color="175,180,190" fill="true" layer="1"
+        height="30.0" shape3D="true"
+        shape="370.0,250.0 430.0,250.0 430.0,310.0 370.0,310.0"/>
+
+  <poly id="bldg_sw_civic_hall" type="building" color="205,210,220" fill="true" layer="1"
+        height="35.0" shape3D="true"
+        shape="90.0,150.0 160.0,150.0 160.0,210.0 90.0,210.0"/>
+  <poly id="bldg_sw_arts_center" type="building" color="195,200,210" fill="true" layer="1"
+        height="26.0" shape3D="true"
+        shape="360.0,150.0 430.0,150.0 430.0,210.0 360.0,210.0"/>
+
+  <poly id="bldg_sw_res_block1" type="building" color="170,175,185" fill="true" layer="1"
+        height="25.0" shape3D="true"
+        shape="90.0,70.0 230.0,70.0 230.0,110.0 90.0,110.0"/>
+  <poly id="bldg_sw_res_block2" type="building" color="170,175,185" fill="true" layer="1"
+        height="25.0" shape3D="true"
+        shape="290.0,70.0 430.0,70.0 430.0,110.0 290.0,110.0"/>
+
+  <!-- SOUTHEAST METROPOLITAN & RESIDENTIAL TOWERS -->
+  <poly id="bldg_se_metro_tower1" type="building" color="190,205,225" fill="true" layer="1"
+        height="58.0" shape3D="true"
+        shape="580.0,340.0 640.0,340.0 640.0,410.0 580.0,410.0"/>
+  <poly id="bldg_se_metro_tower2" type="building" color="185,200,220" fill="true" layer="1"
+        height="54.0" shape3D="true"
+        shape="670.0,340.0 730.0,340.0 730.0,410.0 670.0,410.0"/>
+  <poly id="bldg_se_metro_tower3" type="building" color="180,195,215" fill="true" layer="1"
+        height="50.0" shape3D="true"
+        shape="760.0,340.0 820.0,340.0 820.0,410.0 760.0,410.0"/>
+  <poly id="bldg_se_metro_tower4" type="building" color="175,190,210" fill="true" layer="1"
+        height="46.0" shape3D="true"
+        shape="850.0,340.0 910.0,340.0 910.0,410.0 850.0,410.0"/>
+
+  <poly id="bldg_se_res_mid1" type="building" color="170,180,190" fill="true" layer="1"
+        height="32.0" shape3D="true"
+        shape="580.0,230.0 640.0,230.0 640.0,290.0 580.0,290.0"/>
+  <poly id="bldg_se_res_mid2" type="building" color="165,175,185" fill="true" layer="1"
+        height="32.0" shape3D="true"
+        shape="850.0,230.0 910.0,230.0 910.0,290.0 850.0,290.0"/>
+
+  <poly id="bldg_se_arena_complex" type="building" color="210,215,225" fill="true" layer="1"
+        height="36.0" shape3D="true"
+        shape="680.0,170.0 810.0,170.0 810.0,290.0 680.0,290.0"/>
+
+  <poly id="bldg_se_galleria" type="building" color="195,200,210" fill="true" layer="1"
+        height="24.0" shape3D="true"
+        shape="580.0,80.0 730.0,80.0 730.0,130.0 580.0,130.0"/>
+  <poly id="bldg_se_fitness_center" type="building" color="185,190,200" fill="true" layer="1"
+        height="22.0" shape3D="true"
+        shape="760.0,80.0 910.0,80.0 910.0,130.0 760.0,130.0"/>
+
+  <!-- ────────────────────────────────────────────────────────────────────── -->
+  <!-- 4. CUSTOM LANDMARKS & BILLBOARD POIS ("LEACER")                         -->
+  <!-- ────────────────────────────────────────────────────────────────────── -->
+
+  <!-- West Gateway LEACER Billboard & Structure (IN_W) -->
+  <poly id="structure_billboard_west" type="landmark" color="35,45,60" fill="true" layer="5"
+        height="14.0" shape3D="true"
+        shape="-150.0,520.0 -90.0,520.0 -90.0,530.0 -150.0,530.0"/>
+  <poi id="poi_billboard_west" name="LEACER" type="billboard" color="255,215,0" layer="10"
+       x="-120.0" y="525.0" width="30.0" height="10.0"/>
+
+  <!-- North Gateway LEACER Billboard & Structure (IN_N) -->
+  <poly id="structure_billboard_north" type="landmark" color="35,45,60" fill="true" layer="5"
+        height="14.0" shape3D="true"
+        shape="520.0,1110.0 530.0,1110.0 530.0,1170.0 520.0,1170.0"/>
+  <poi id="poi_billboard_north" name="LEACER" type="billboard" color="255,215,0" layer="10"
+       x="525.0" y="1140.0" width="30.0" height="10.0"/>
+
+  <!-- East Gateway LEACER Billboard & Structure (IN_E) -->
+  <poly id="structure_billboard_east" type="landmark" color="35,45,60" fill="true" layer="5"
+        height="14.0" shape3D="true"
+        shape="1090.0,520.0 1150.0,520.0 1150.0,530.0 1090.0,530.0"/>
+  <poi id="poi_billboard_east" name="LEACER" type="billboard" color="255,215,0" layer="10"
+       x="1120.0" y="525.0" width="30.0" height="10.0"/>
+
+  <!-- South Gateway LEACER Billboard & Structure (IN_S) -->
+  <poly id="structure_billboard_south" type="landmark" color="35,45,60" fill="true" layer="5"
+        height="14.0" shape3D="true"
+        shape="520.0,-170.0 530.0,-170.0 530.0,-110.0 520.0,-110.0"/>
+  <poi id="poi_billboard_south" name="LEACER" type="billboard" color="255,215,0" layer="10"
+       x="525.0" y="-140.0" width="30.0" height="10.0"/>
+
+  <!-- Central LEACER Intelligent Transportation Landmark (N11 Viaduct Interchange) -->
+  <poi id="poi_leacer_central_hub" name="LEACER Central Control" type="landmark" color="0,220,255" layer="10"
+       x="500.0" y="500.0" width="40.0" height="15.0"/>
+
+</additionals>

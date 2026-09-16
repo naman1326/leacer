@@ -28,47 +28,14 @@ DATA_DIR = SIM_DIR / "data"
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(SIM_DIR))
 
-# ── Args ──────────────────────────────────────────────────────────────────────
-parser = argparse.ArgumentParser()
-parser.add_argument("--episodes", type=int,   default=500)
-parser.add_argument("--steps",    type=int,   default=300,
-                    help="Steps per episode (shorter = faster training)")
-parser.add_argument("--gui",      action="store_true")
-parser.add_argument("--lr",       type=float, default=3e-4)
-parser.add_argument("--gamma",    type=float, default=0.99)
-parser.add_argument("--lam",      type=float, default=0.95)
-parser.add_argument("--clip",     type=float, default=0.2)
-parser.add_argument("--vf_coef",  type=float, default=0.5)
-parser.add_argument("--ent_coef", type=float, default=0.01)
-parser.add_argument("--ppo_epochs", type=int, default=4)
-args = parser.parse_args()
-
 SEED = 42
 np.random.seed(SEED)
 
-print("=" * 65)
-print("LEACER — PPO Routing Policy Training")
-print("=" * 65)
-print(f"  Episodes  : {args.episodes}")
-print(f"  Steps/ep  : {args.steps}")
-print(f"  LR        : {args.lr}")
-
-# ── GRID NODES and adjacency (matches leacer_network) ────────────────────────
-GRID_NODES = ["N00","N01","N02","N10","N11","N12","N20","N21","N22"]
-ENTRY_NODES = ["IN_W","IN_N","IN_E","IN_S"]
-ALL_NODES   = GRID_NODES + ENTRY_NODES
-
-ADJACENCY = {
-    "N00": ["N01","N10"],  "N01": ["N00","N02","N11"],
-    "N02": ["N01","N12"],  "N10": ["N00","N11","N20"],
-    "N11": ["N01","N10","N12","N21"], "N12": ["N02","N11","N22"],
-    "N20": ["N10","N21"],  "N21": ["N11","N20","N22"],
-    "N22": ["N12","N21"],
-    "IN_W": ["N00","N10","N20"], "IN_N": ["N00","N01","N02"],
-    "IN_E": ["N02","N12","N22"], "IN_S": ["N20","N21","N22"],
-}
+from topology_cache import ADJACENCY, ALL_NODES
+from routing_utils import RoadGraph
+from scenario_config import SUMOCFG_PATH, NET_FILE_PATH
 NODE_IDX = {n: i for i, n in enumerate(ALL_NODES)}
-MAX_ACTIONS = max(len(v) for v in ADJACENCY.values())   # 4
+MAX_ACTIONS = 4   # matches leacer_runner.py action space cap
 
 # ── State dimension: [h_origin(8), h_dest(8), TSV(4), step_frac(1)] ──────────
 EMB_DIM    = 8
@@ -104,9 +71,11 @@ class RoutingEnv:
     Reward: -F(current_edge_TSV) + bonus if destination reached
     """
 
-    def __init__(self, use_gui=False):
+    def __init__(self, use_gui=False, steps=300):
         self.use_gui = use_gui
+        self.steps   = steps
         self._sumo   = None
+        self._road   = None
         self._step   = 0
         self._max_route_steps = 12   # max hops before episode terminates
 
@@ -119,23 +88,32 @@ class RoutingEnv:
     def _start_sumo(self):
         try:
             from sumo_env import SUMOEnv
-            cfg = SIM_DIR / "sumo_cfg" / "leacer.sumocfg"
-            self._sumo = SUMOEnv(cfg_path=str(cfg), use_gui=self.use_gui,
-                                 max_steps=args.steps)
+            from scenario_config import SUMOCFG_PATH
+            self._sumo = SUMOEnv(cfg_path=str(SUMOCFG_PATH), use_gui=self.use_gui,
+                                 max_steps=self.steps, output_prefix="train_ppo_")
             self._sumo.start()
+            self._road = RoadGraph(net_file=str(NET_FILE_PATH))
         except Exception as e:
             print(f"[WARN] SUMO unavailable ({e}) — using mock TSV")
             self._sumo = None
 
     def _get_tsv(self, node_id):
-        """Get TSV for the edge leading into node_id, or mock if SUMO unavailable."""
-        if self._sumo is not None:
+        """Get TSV for an edge feeding into node_id, or mock if SUMO unavailable."""
+        if self._sumo is not None and self._road is not None:
             try:
                 import traci
-                # Pull speed + queue for edges connected to this node
-                edge_candidates = [e for e in self._sumo.edge_ids
-                                   if node_id.replace("N","") in e or
-                                      node_id in e]
+                # Real edges into this node via the actual road graph. The
+                # previous version matched by checking whether node_id
+                # appeared as a substring of the edge id -- that only
+                # worked by coincidence on the old toy grid, where edges
+                # were named "E00_01" (containing the node names by
+                # construction). MoST's real edge IDs are plain numeric
+                # strings unrelated to junction IDs, so that check almost
+                # never matched, meaning training silently used the mock
+                # branch below even when SUMO was connected and working.
+                edge_candidates = [
+                    data["id"] for _, _, data in self._road.G.in_edges(node_id, data=True)
+                ]
                 if edge_candidates:
                     states = self._sumo.get_edge_states()
                     for s in states:
@@ -166,10 +144,13 @@ class RoutingEnv:
         self._route   = [self._origin]
         self._step    = 0
 
-        # Reset SUMO environment per episode start
+        # Advance or reset SUMO environment
         if self._sumo is not None:
             try:
-                self._sumo.reset()
+                if self._sumo.is_done:
+                    self._sumo.reset()
+                else:
+                    self._sumo.step()
             except Exception:
                 self._sumo = None
 
@@ -213,7 +194,7 @@ class RoutingEnv:
         """Boolean mask of valid actions for current node."""
         neighbours = sorted(ADJACENCY.get(self._current, []))
         mask = np.zeros(MAX_ACTIONS, dtype=bool)
-        mask[:len(neighbours)] = True
+        mask[:min(len(neighbours), MAX_ACTIONS)] = True
         return mask
 
     def close(self):
@@ -242,7 +223,7 @@ torch.manual_seed(SEED)
 class ActorCritic(nn.Module):
     def __init__(self, state_dim=STATE_DIM, n_actions=MAX_ACTIONS, hidden=128):
         super().__init__()
-        self.backbone = nn.Sequential(
+        self.bb = nn.Sequential(
             nn.Linear(state_dim, hidden), nn.Tanh(),
             nn.Linear(hidden, hidden),   nn.Tanh(),
         )
@@ -250,7 +231,7 @@ class ActorCritic(nn.Module):
         self.critic = nn.Linear(hidden, 1)
 
     def forward(self, s):
-        f  = self.backbone(s)
+        f  = self.bb(s)
         return self.actor(f), self.critic(f).squeeze(-1)
 
     def act(self, s: np.ndarray, mask: np.ndarray):
@@ -316,95 +297,126 @@ def ppo_update(model, optimizer, rollout, gamma, lam, clip, vf_coef, ent_coef, p
 
 
 # ── Main training loop ────────────────────────────────────────────────────────
-model     = ActorCritic()
-optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-env       = RoutingEnv(use_gui=args.gui)
-env._start_sumo()
+def train(episodes=500, steps=300, gui=False, lr=3e-4, gamma=0.99, lam=0.95,
+          clip=0.2, vf_coef=0.5, ent_coef=0.01, ppo_epochs=4):
+    print("=" * 65)
+    print("LEACER — PPO Routing Policy Training")
+    print("=" * 65)
+    print(f"  Episodes  : {episodes}")
+    print(f"  Steps/ep  : {steps}")
+    print(f"  LR        : {lr}")
 
-ep_rewards  = []
-ep_lengths  = []
-avg_rewards = []
-window      = deque(maxlen=50)
+    model     = ActorCritic()
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    env       = RoutingEnv(use_gui=gui, steps=steps)
+    env._start_sumo()
 
-print(f"\n{'Ep':>6}  {'Reward':>9}  {'Avg50':>9}  {'Steps':>7}  {'P-Loss':>8}  {'V-Loss':>8}")
-print("-" * 58)
+    ep_rewards  = []
+    ep_lengths  = []
+    avg_rewards = []
+    window      = deque(maxlen=50)
 
-best_avg = -float("inf")
-best_state_dict = None
+    print(f"\n{'Ep':>6}  {'Reward':>9}  {'Avg50':>9}  {'Steps':>7}  {'P-Loss':>8}  {'V-Loss':>8}")
+    print("-" * 58)
 
-for episode in range(1, args.episodes + 1):
-    state = env.reset(episode)
-    rollout = {"states":[], "actions":[], "log_probs":[], "rewards":[], "dones":[], "values":[]}
-    ep_reward = 0.0
-    done      = False
+    best_avg = -float("inf")
+    best_state_dict = None
 
-    while not done:
-        mask  = env.valid_mask()
-        with torch.no_grad():
-            a, lp, val = model.act(state, mask)
-        next_state, reward, done = env.step(a)
-        rollout["states"].append(state)
-        rollout["actions"].append(a)
-        rollout["log_probs"].append(lp.item())
-        rollout["rewards"].append(reward)
-        rollout["dones"].append(done)
-        rollout["values"].append(val.item())
-        state      = next_state
-        ep_reward += reward
+    for episode in range(1, episodes + 1):
+        state = env.reset(episode)
+        rollout = {"states":[], "actions":[], "log_probs":[], "rewards":[], "dones":[], "values":[]}
+        ep_reward = 0.0
+        done      = False
 
-    pl, vl, ent = ppo_update(model, optimizer, rollout,
-                              args.gamma, args.lam, args.clip,
-                              args.vf_coef, args.ent_coef, args.ppo_epochs)
+        while not done:
+            mask  = env.valid_mask()
+            with torch.no_grad():
+                a, lp, val = model.act(state, mask)
+            next_state, reward, done = env.step(a)
+            rollout["states"].append(state)
+            rollout["actions"].append(a)
+            rollout["log_probs"].append(lp.item())
+            rollout["rewards"].append(reward)
+            rollout["dones"].append(done)
+            rollout["values"].append(val.item())
+            state      = next_state
+            ep_reward += reward
 
-    ep_rewards.append(ep_reward)
-    ep_lengths.append(len(rollout["actions"]))
-    window.append(ep_reward)
-    avg50 = np.mean(window)
-    avg_rewards.append(avg50)
+        pl, vl, ent = ppo_update(model, optimizer, rollout,
+                                  gamma, lam, clip,
+                                  vf_coef, ent_coef, ppo_epochs)
 
-    if avg50 > best_avg:
-        best_avg = avg50
-        best_state_dict = {k: v.clone() for k, v in model.state_dict().items()}
+        ep_rewards.append(ep_reward)
+        ep_lengths.append(len(rollout["actions"]))
+        window.append(ep_reward)
+        avg50 = np.mean(window)
+        avg_rewards.append(avg50)
 
-    if episode % 25 == 0 or episode == 1:
-        print(f"{episode:>6}  {ep_reward:>9.3f}  {avg50:>9.3f}  "
-              f"{ep_lengths[-1]:>7}  {pl:>8.4f}  {vl:>8.4f}")
+        if avg50 > best_avg:
+            best_avg = avg50
+            best_state_dict = {k: v.clone() for k, v in model.state_dict().items()}
 
-env.close()
+        if episode % 25 == 0 or episode == 1:
+            print(f"{episode:>6}  {ep_reward:>9.3f}  {avg50:>9.3f}  "
+                  f"{ep_lengths[-1]:>7}  {pl:>8.4f}  {vl:>8.4f}")
 
-# ── Save weights ──────────────────────────────────────────────────────────────
-model.load_state_dict(best_state_dict)
-save_path = DATA_DIR / "ppo_weights.pt"
-torch.save({
-    "model_state": best_state_dict,
-    "model_config": dict(state_dim=STATE_DIM, n_actions=MAX_ACTIONS, hidden=128),
-    "best_avg_reward": best_avg,
-    "episodes_trained": args.episodes,
-    "node_embeddings": {k: v.tolist() for k, v in
-                        list(zip(ALL_NODES, [env._node_emb[n] for n in ALL_NODES]))},
-    "hyperparams": vars(args),
-}, save_path)
-print(f"\n[Saved] {save_path}")
-print(f"[Best]  avg50_reward = {best_avg:.4f}")
+    env.close()
 
-# ── Training curve ────────────────────────────────────────────────────────────
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-ax1.plot(ep_rewards,  lw=0.8, alpha=0.5, color="#1f77b4", label="Episode reward")
-ax1.plot(avg_rewards, lw=1.6, color="#d62728", label="Avg(50)")
-ax1.set_xlabel("Episode"); ax1.set_ylabel("Cumulative Reward")
-ax1.set_title("PPO Routing Agent — Reward Convergence")
-ax1.legend(); ax1.grid(True, alpha=0.3)
+    # ── Save weights ──────────────────────────────────────────────────────────────
+    model.load_state_dict(best_state_dict)
+    save_path = DATA_DIR / "ppo_weights.pt"
+    torch.save({
+        "model_state": best_state_dict,
+        "model_config": dict(state_dim=STATE_DIM, n_actions=MAX_ACTIONS, hidden=128),
+        "best_avg_reward": best_avg,
+        "episodes_trained": episodes,
+        "node_embeddings": {k: v.tolist() for k, v in
+                            list(zip(ALL_NODES, [env._node_emb[n] for n in ALL_NODES]))},
+        "hyperparams": dict(episodes=episodes, steps=steps, lr=lr, gamma=gamma,
+                            lam=lam, clip=clip, vf_coef=vf_coef, ent_coef=ent_coef,
+                            ppo_epochs=ppo_epochs),
+    }, save_path)
+    print(f"\n[Saved] {save_path}")
+    print(f"[Best]  avg50_reward = {best_avg:.4f}")
 
-ax2.plot(ep_lengths, lw=0.8, color="#2ca02c")
-ax2.set_xlabel("Episode"); ax2.set_ylabel("Route Length (hops)")
-ax2.set_title("Route Length per Episode")
-ax2.grid(True, alpha=0.3)
+    # ── Training curve ────────────────────────────────────────────────────────────
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    ax1.plot(ep_rewards,  lw=0.8, alpha=0.5, color="#1f77b4", label="Episode reward")
+    ax1.plot(avg_rewards, lw=1.6, color="#d62728", label="Avg(50)")
+    ax1.set_xlabel("Episode"); ax1.set_ylabel("Cumulative Reward")
+    ax1.set_title("PPO Routing Agent — Reward Convergence")
+    ax1.legend(); ax1.grid(True, alpha=0.3)
 
-plt.tight_layout()
-plt.savefig(DATA_DIR / "ppo_training_rewards.png", dpi=120)
-plt.close()
-print(f"[Plot]  {DATA_DIR / 'ppo_training_rewards.png'}")
+    ax2.plot(ep_lengths, lw=0.8, color="#2ca02c")
+    ax2.set_xlabel("Episode"); ax2.set_ylabel("Route Length (hops)")
+    ax2.set_title("Route Length per Episode")
+    ax2.grid(True, alpha=0.3)
 
-print("\n" + "=" * 65)
-print("PPO training complete.")
-print("=" * 65)
+    plt.tight_layout()
+    plt.savefig(DATA_DIR / "ppo_training_rewards.png", dpi=120)
+    plt.close()
+    print(f"[Plot]  {DATA_DIR / 'ppo_training_rewards.png'}")
+
+    print("\n" + "=" * 65)
+    print("PPO training complete.")
+    print("=" * 65)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--episodes", type=int,   default=500)
+    parser.add_argument("--steps",    type=int,   default=300,
+                        help="Steps per episode (shorter = faster training)")
+    parser.add_argument("--gui",      action="store_true")
+    parser.add_argument("--lr",       type=float, default=3e-4)
+    parser.add_argument("--gamma",    type=float, default=0.99)
+    parser.add_argument("--lam",      type=float, default=0.95)
+    parser.add_argument("--clip",     type=float, default=0.2)
+    parser.add_argument("--vf_coef",  type=float, default=0.5)
+    parser.add_argument("--ent_coef", type=float, default=0.01)
+    parser.add_argument("--ppo_epochs", type=int, default=4)
+    args = parser.parse_args()
+
+    train(episodes=args.episodes, steps=args.steps, gui=args.gui, lr=args.lr,
+          gamma=args.gamma, lam=args.lam, clip=args.clip, vf_coef=args.vf_coef,
+          ent_coef=args.ent_coef, ppo_epochs=args.ppo_epochs)

@@ -1,20 +1,24 @@
 <viewsettings>
-    <scheme name="LEACER View">
+    <scheme name="LEACER 3D Urban View">
+        <background backgroundColor="235,238,242" showGrid="false"/>
         <vehicles>
             <colorScheme name="by speed">
-                <entry color="red"    threshold="0"/>
-                <entry color="yellow" threshold="8"/>
-                <entry color="green"  threshold="16"/>
+                <entry color="231,76,60"   threshold="0"/>
+                <entry color="241,196,15"  threshold="8"/>
+                <entry color="46,204,113"  threshold="16"/>
             </colorScheme>
         </vehicles>
         <edges>
             <colorScheme name="by occupancy">
-                <entry color="green"  threshold="0"/>
-                <entry color="yellow" threshold="0.3"/>
-                <entry color="red"    threshold="0.7"/>
+                <entry color="46,204,113"  threshold="0"/>
+                <entry color="243,156,18"  threshold="0.3"/>
+                <entry color="231,76,60"   threshold="0.7"/>
             </colorScheme>
         </edges>
+        <polygons draw="true" fill="true"/>
+        <pois draw="true" showText="true"/>
+        <junctions draw="true"/>
     </scheme>
-    <viewport zoom="150" x="500" y="500"/>
-    <delay value="50"/>
+    <viewport zoom="120" x="500" y="500"/>
+    <delay value="40"/>
 </viewsettings>
