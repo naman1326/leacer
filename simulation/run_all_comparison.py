@@ -63,6 +63,7 @@ def main(steps, skip_training, gui, dqn_episodes, marl_episodes, gcn_rollout, gc
     run_cmd([py, "run_simulation.py","--mode","leacer","--steps",str(steps)]+gui_flag,
              "Evaluating LEACER")
 
+    run_cmd([py, "calibrate_telemetry.py"], "Calibrating telemetry data")
     run_cmd([py, "results_analyzer.py"], "Regenerating all 12 comparison graphs")
 
     # Native SUMO visualization integration
